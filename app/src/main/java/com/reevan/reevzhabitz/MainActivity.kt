@@ -1,25 +1,36 @@
 package com.reevan.reevzhabitz
 
+import android.graphics.Color
 import android.os.Bundle
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reevan.reevzhabitz.ui.ReevzHabitzApp
 import com.reevan.reevzhabitz.ui.settings.PreferencesViewModel
 import com.reevan.reevzhabitz.ui.theme.ReevzHabitzTheme
+import com.reevan.reevzhabitz.ui.theme.isDark
 import com.reevan.reevzhabitz.util.TodayClock
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    // Same instance Settings gets from viewModel(), so a theme change applies immediately.
+    private val preferences: PreferencesViewModel by viewModels { PreferencesViewModel.Factory }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        holdFirstFrameUntilSettingsLoad()
 
         // Restarted on every return to the foreground, so "today" is re-read after the phone has
         // slept through midnight, then kept ticking while the app stays on screen.
@@ -30,14 +41,39 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            // Same instance a Settings screen would use, so a theme change applies immediately.
-            val preferences: PreferencesViewModel =
-                viewModel(factory = PreferencesViewModel.Factory)
             val settings by preferences.settings.collectAsStateWithLifecycle()
+            val themeMode = settings?.themeMode ?: return@setContent
+            val dark = themeMode.isDark
 
-            ReevzHabitzTheme(themeMode = settings.themeMode) {
+            // enableEdgeToEdge() alone picks status bar icon colours from the *phone's* light/dark
+            // setting. Re-applying it with the app theme's darkness keeps them legible when the two
+            // disagree.
+            DisposableEffect(dark) {
+                val style = SystemBarStyle.auto(Color.TRANSPARENT, Color.TRANSPARENT) { dark }
+                enableEdgeToEdge(statusBarStyle = style, navigationBarStyle = style)
+                onDispose {}
+            }
+
+            ReevzHabitzTheme(themeMode = themeMode) {
                 ReevzHabitzApp()
             }
         }
+    }
+
+    /**
+     * Keeps the system splash screen up until the stored theme has been read — a single-row
+     * query, so a few milliseconds — instead of drawing the default theme and then switching.
+     */
+    private fun holdFirstFrameUntilSettingsLoad() {
+        val content: View = findViewById(android.R.id.content)
+        content.viewTreeObserver.addOnPreDrawListener(
+            object : ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    if (preferences.settings.value == null) return false
+                    content.viewTreeObserver.removeOnPreDrawListener(this)
+                    return true
+                }
+            },
+        )
     }
 }

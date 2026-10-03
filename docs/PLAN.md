@@ -8,7 +8,7 @@ change → build/test → report). At the end of every phase, update "Current pr
 | # | Phase | Delivers | Status |
 |---|-------|----------|--------|
 | 1 | Foundations | Data model, "today" clock, navigation, thin header, Menu | ✅ |
-| 2 | Look & feel | 4 themes, habit colours, icon set, habit card, app icon, Settings (theme) | ☐ |
+| 2 | Look & feel | 4 themes, habit colours, icon set, habit card, app icon, Settings (theme) | ✅ |
 | 3 | Add Habit | Create a habit with name/description/colour/icon/start date | ☐ |
 | 4 | Home | Today's habits, tick/untick, sort toggle, midnight rollover — **first install on phone** | ☐ |
 | 5 | Remove Habit | Multi-select delete with keep-stats toggle; Settings "Clear deleted stats" | ☐ |
@@ -184,5 +184,5 @@ Built before the screens so every screen is built against the final look.
 
 - Empty states (no habits yet, nothing due today, no deleted habits).
 - Check every screen in all four themes; long-name wrapping; 48dp touch targets.
-- Lint clean-up (unused template colours/resources).
+- Lint clean-up (template colours and PNG mipmaps already removed in Phase 2).
 - Full on-device pass on the phone, with a database backup taken first.

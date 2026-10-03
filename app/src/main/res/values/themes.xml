@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.ReevzHabitz" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Dark parent: the default theme is Dark, so the window and splash start dark too. -->
+    <style name="Theme.ReevzHabitz" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+    </style>
 </resources>

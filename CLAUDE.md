@@ -108,7 +108,7 @@ is attached.
 
 ## Current project state
 
-Phase 1 of `docs/PLAN.md` is done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
+Phases 1–2 of `docs/PLAN.md` are done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
 Target device is a **Nothing Phone (2a) on Android 16**; `minSdk 26` / `targetSdk 37`.
 
 - `data/` — Room schema v1: `habits` (soft delete via `deletedOn`), `completions` (one row per
@@ -121,9 +121,26 @@ Target device is a **Nothing Phone (2a) on Android 16**; `minSdk 26` / `targetSd
 - `ui/navigation/` — hand-rolled back stack (`Destination` sealed class, pure `push`/`pop`, saved
   as route strings). `Destination`'s companion lists must stay `by lazy` (see the comment there).
 - `ui/common/AppHeader` — `DateHeader` (Home) and `BreadcrumbHeader` (every other screen).
-- `ui/menu/MenuScreen` — the five Menu buttons. Every other screen is a `SectionPlaceholder`.
-- `ui/theme` — still the template palette. VS Code Dark and Tokyo Night render as plain Dark until
-  Phase 2.
+- `ui/menu/MenuScreen` — the five Menu buttons, styled as a game main menu.
+- `ui/settings/SettingsScreen` — theme picker (radio rows with a swatch per theme).
+- `ui/common/HabitCard` — the shared habit card (coloured edge + white icon, name in the habit
+  colour, optional description, trailing slot) and `HabitCardDivider`. Every list of habits uses it.
+- `ui/theme/` — four fixed themes (Light, Dark, VS Code Dark, Tokyo Night; default Dark), dynamic
+  colour off. Material roles via `MaterialTheme.colorScheme`; app-only colours (card divider,
+  Statistics done/missed/future/today ring) via `HabitzTheme.colors`. `HabitColors` (23) and
+  `HabitIcons` (93) map stable string keys — the values stored in `habits.colorKey/iconKey` — to
+  colours and drawables. Keys are never renamed or removed. Each habit colour has a light-theme
+  and a dark-theme shade; read it with `habitColor.current`. `ThemeColorsTest` enforces contrast for
+  every theme and habit colour — run it after touching any colour.
+- `MainActivity` holds the first frame until settings load (no flash of the wrong theme) and sets
+  system bar icon colours from the app theme, not the phone's.
+- Everything else (Home's habit list, Add/Remove/Edit/Statistics) is still a `SectionPlaceholder`.
+
+Generated assets — edit the script, not the output:
+- `tools/fetch_habit_icons.py` → `res/drawable/habit_*.xml` (Material Symbols, Apache 2.0; see
+  `docs/THIRD_PARTY.md`). Add icons here *and* in `HabitIcons.kt`.
+- `tools/make_icon.py` → the adaptive launcher icon layers (raised fist). minSdk 26 means no PNG
+  mipmaps are needed.
 
 The schema has never been installed on the phone, so until the first real install (end of Phase 4)
 v1 can still be edited freely; after that, every change needs a migration.

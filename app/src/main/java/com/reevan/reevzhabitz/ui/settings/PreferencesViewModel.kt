@@ -19,20 +19,25 @@ import kotlinx.coroutines.launch
 /**
  * App-wide preferences.
  *
- * MainActivity needs the theme before anything renders, and `viewModel()` resolves to the
- * activity's store, so a future Settings screen sees this same instance.
+ * MainActivity and Settings share one instance (`viewModel()` resolves to the activity's store),
+ * so a theme change applies immediately.
  */
 class PreferencesViewModel(
     private val dao: AppSettingsDao,
 ) : ViewModel() {
 
-    val settings: StateFlow<AppSettings> =
+    /**
+     * The stored settings, or null until the first read completes. MainActivity holds the first
+     * frame until this is non-null, so the app never flashes the default theme before the chosen
+     * one. Started eagerly so that read begins before anything is on screen to subscribe.
+     */
+    val settings: StateFlow<AppSettings?> =
         dao.observe()
             .map { it ?: AppSettings() }
             .stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
-                initialValue = AppSettings(),
+                started = SharingStarted.Eagerly,
+                initialValue = null,
             )
 
     fun setThemeMode(mode: ThemeMode) {
@@ -47,8 +52,6 @@ class PreferencesViewModel(
     }
 
     companion object {
-        private const val STOP_TIMEOUT_MILLIS = 5_000L
-
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {
                 val application =

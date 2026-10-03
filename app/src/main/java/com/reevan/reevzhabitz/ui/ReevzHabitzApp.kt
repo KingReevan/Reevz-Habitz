@@ -27,6 +27,7 @@ import com.reevan.reevzhabitz.ui.navigation.InitialBackStack
 import com.reevan.reevzhabitz.ui.navigation.breadcrumbs
 import com.reevan.reevzhabitz.ui.navigation.pop
 import com.reevan.reevzhabitz.ui.navigation.push
+import com.reevan.reevzhabitz.ui.settings.SettingsScreen
 import com.reevan.reevzhabitz.ui.theme.ReevzHabitzTheme
 import com.reevan.reevzhabitz.util.TodayClock
 import com.reevan.reevzhabitz.util.formatHeaderDate
@@ -84,7 +85,7 @@ fun ReevzHabitzApp() {
                 Destination.StatisticsList,
                 is Destination.HabitStatistics,
                 -> SectionPlaceholder("Statistics", "Coming in Phase 7.")
-                Destination.Settings -> SectionPlaceholder("Settings", "Coming in Phase 2.")
+                Destination.Settings -> SettingsScreen()
             }
         }
     }
