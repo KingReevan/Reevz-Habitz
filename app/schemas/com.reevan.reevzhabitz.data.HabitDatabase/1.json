@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "b464f9e07a20fc4c22815158e1fcae24",
+    "identityHash": "bba597cb4061736668f6001ddb4ab61a",
     "entities": [
       {
         "tableName": "habits",
@@ -103,7 +103,7 @@
       },
       {
         "tableName": "app_settings",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `themeMode` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `themeMode` TEXT NOT NULL, `homeSort` TEXT NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -114,6 +114,12 @@
           {
             "fieldPath": "themeMode",
             "columnName": "themeMode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "homeSort",
+            "columnName": "homeSort",
             "affinity": "TEXT",
             "notNull": true
           }
@@ -128,7 +134,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b464f9e07a20fc4c22815158e1fcae24')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'bba597cb4061736668f6001ddb4ab61a')"
     ]
   }
 }

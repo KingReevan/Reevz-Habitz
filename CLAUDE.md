@@ -108,8 +108,8 @@ is attached.
 
 ## Current project state
 
-Phases 1–2 of `docs/PLAN.md` are done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
-Target device is a **Nothing Phone (2a) on Android 16**; `minSdk 26` / `targetSdk 37`.
+Phases 1–4 of `docs/PLAN.md` are done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
+Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00050146M001006`; `minSdk 26` / `targetSdk 37`.
 
 - `data/` — Room schema v1: `habits` (soft delete via `deletedOn`), `completions` (one row per
   habit per day done, cascades on hard delete), `app_settings` (theme). Dates are `LocalDate`
@@ -134,7 +134,30 @@ Target device is a **Nothing Phone (2a) on Android 16**; `minSdk 26` / `targetSd
   every theme and habit colour — run it after touching any colour.
 - `MainActivity` holds the first frame until settings load (no flash of the wrong theme) and sets
   system bar icon colours from the app theme, not the phone's.
-- Everything else (Home's habit list, Add/Remove/Edit/Statistics) is still a `SectionPlaceholder`.
+- `ui/addhabit/` — Add Habit. Form state lives in the screen (`rememberSaveable` /
+  `rememberTextFieldState`), not the ViewModel: ViewModels are activity-scoped under the
+  hand-rolled back stack, so per-visit state kept in one would reappear on the next visit.
+  `AddHabitViewModel` only inserts. Create pops back to Menu.
+- `ui/habitform/` — form pieces shared with Phase 6's editor: `HabitNameField`, description field,
+  `HabitColorPicker`, `HabitIconPicker`, and `HabitDraft` (validation + `toHabit`).
+- **Habit name capitalisation is display-only** (`OutputTransformation`); `HabitDraft.toHabit`
+  applies `capitalizeWords` when saving. Don't move it back into onValueChange or an
+  InputTransformation — rewriting text the keyboard is composing desyncs it.
+- `ui/home/` — Home: today's habits via `HabitDao.observeDueOn(today)` (active, started, with a
+  `done` flag for that day), ordered by `orderForHome` (to-do first, done last, each group in the
+  chosen `HomeSort`; "newest" = most recently *created*). Only the checkbox ticks; unticking asks
+  first. The sort is remembered in `app_settings.homeSort`; the header icon shows the current one.
+  `HomeViewModel` lives in the shell because the header's sort button needs it.
+- `app_settings` is written with per-column UPDATEs (`setThemeMode`, `cycleHomeSort`), never by
+  rewriting the row, so two screens can't overwrite each other's preference.
+- Every Add Habit field is required (name, description, colour, icon); nothing is preselected.
+  Start From defaults to tomorrow.
+- "Today" also restarts on clock / time zone / date change broadcasts (`util/clockChanges`), because
+  the midnight delay counts elapsed time and can't see the wall clock jump.
+- Remove/Edit/Statistics are still `SectionPlaceholder`s.
+- Testing text input on the emulator: `adb shell input text` with a whole string types faster than
+  the emulator keyboard keeps up with in a word-capitalising field and drops letters. Send one
+  character per `input text` call to get human-pace typing.
 
 Generated assets — edit the script, not the output:
 - `tools/fetch_habit_icons.py` → `res/drawable/habit_*.xml` (Material Symbols, Apache 2.0; see
@@ -142,8 +165,14 @@ Generated assets — edit the script, not the output:
 - `tools/make_icon.py` → the adaptive launcher icon layers (raised fist). minSdk 26 means no PNG
   mipmaps are needed.
 
-The schema has never been installed on the phone, so until the first real install (end of Phase 4)
-v1 can still be edited freely; after that, every change needs a migration.
+**Schema v1 has been on the phone since 2026-10-03 and is frozen.** Every schema change from now
+on is a version bump plus a migration (`@AutoMigration` where additive). Never edit v1 in place.
+Before any `connectedAndroidTest` on the phone, back up its database (see Data guidelines) — the
+test run uninstalls the app and deletes it. Prefer the emulator for instrumented tests.
+
+Emulator testing tips: run adb from Git Bash with `MSYS_NO_PATHCONV=1`, or device paths like
+`/data/local/tmp` get rewritten to Windows paths. `adb root` + `adb shell date MMDDhhmmYY.ss` sets
+the clock (turn `auto_time` back on afterwards).
 
 A local emulator, `habitz_test` (Android 14, Pixel 7 profile), exists for verification while the
 phone is not connected. Start it with

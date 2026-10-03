@@ -41,14 +41,7 @@ class PreferencesViewModel(
             )
 
     fun setThemeMode(mode: ThemeMode) {
-        update { it.copy(themeMode = mode) }
-    }
-
-    private fun update(transform: (AppSettings) -> AppSettings) {
-        viewModelScope.launch {
-            val current = dao.get() ?: AppSettings()
-            dao.upsert(transform(current))
-        }
+        viewModelScope.launch { dao.setThemeMode(mode) }
     }
 
     companion object {

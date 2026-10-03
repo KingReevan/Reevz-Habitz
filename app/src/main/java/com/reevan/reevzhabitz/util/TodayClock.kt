@@ -11,11 +11,13 @@ import java.time.ZonedDateTime
  * The app's single notion of "today". Home's date, which habits are due, and which day a tick
  * lands on all read from here, so they can never disagree.
  *
- * Kept current two ways, because neither is enough alone:
+ * Kept current three ways, because none is enough alone:
  * - [tickAtMidnight] sleeps until the next day starts while the app is on screen.
  * - MainActivity restarts it every time the app comes back to the foreground, which re-reads the
  *   clock. Coroutine delays don't count time the phone spends asleep, so a delay started at 23:00
  *   could otherwise wake up hours late.
+ * - MainActivity also restarts it on every clock, time zone or date change ([clockChanges]). The
+ *   delay measures elapsed time, so a jump in the wall clock would otherwise go unnoticed.
  *
  * [now] is read fresh on every call, so a time-zone change is picked up at the next refresh.
  */

@@ -20,6 +20,8 @@ import com.reevan.reevzhabitz.ui.settings.PreferencesViewModel
 import com.reevan.reevzhabitz.ui.theme.ReevzHabitzTheme
 import com.reevan.reevzhabitz.ui.theme.isDark
 import com.reevan.reevzhabitz.util.TodayClock
+import com.reevan.reevzhabitz.util.clockChanges
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -33,10 +35,13 @@ class MainActivity : ComponentActivity() {
         holdFirstFrameUntilSettingsLoad()
 
         // Restarted on every return to the foreground, so "today" is re-read after the phone has
-        // slept through midnight, then kept ticking while the app stays on screen.
+        // slept through midnight, then kept ticking while the app stays on screen. A clock, time
+        // zone or date change restarts it too: the midnight delay can't see the wall clock jump.
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
-                TodayClock.instance.tickAtMidnight()
+                clockChanges(this@MainActivity).collectLatest {
+                    TodayClock.instance.tickAtMidnight()
+                }
             }
         }
 

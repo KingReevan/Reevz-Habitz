@@ -6,6 +6,8 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.reevan.reevzhabitz.data.Completion
 import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDatabase
+import com.reevan.reevzhabitz.data.HomeSort
+import com.reevan.reevzhabitz.data.ThemeMode
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -92,6 +94,42 @@ class HabitDatabaseTest {
         db.openHelper.writableDatabase.execSQL("DELETE FROM habits WHERE id = $id")
 
         assertEquals(1, completionCount())
+    }
+
+    @Test
+    fun observeDueOn_showsStartedActiveHabitsWithTodaysTick() = runBlocking {
+        val started = db.habitDao().insert(habit("Started").copy(startDate = day.minusDays(3)))
+        val startsToday = db.habitDao().insert(habit("Today").copy(startDate = day))
+        db.habitDao().insert(habit("Tomorrow").copy(startDate = day.plusDays(1)))
+        val deleted = db.habitDao().insert(habit("Deleted").copy(startDate = day.minusDays(3)))
+        db.habitDao().update(db.habitDao().getById(deleted)!!.copy(deletedOn = day))
+        db.completionDao().markDone(Completion(started, day))
+        // A tick on another day must not count for this one.
+        db.completionDao().markDone(Completion(startsToday, day.minusDays(1)))
+
+        val due = db.habitDao().observeDueOn(day).first().associate { it.habit.id to it.done }
+        assertEquals(mapOf(started to true, startsToday to false), due)
+
+        // The next day nothing is ticked yet: the daily "reset".
+        val tomorrow = db.habitDao().observeDueOn(day.plusDays(1)).first()
+        assertEquals(3, tomorrow.size)
+        assertEquals(listOf(false, false, false), tomorrow.map { it.done })
+    }
+
+    @Test
+    fun settings_sortCyclesAndThemeChangesDontOverwriteEachOther() = runBlocking {
+        val dao = db.appSettingsDao()
+        assertNull(dao.get())
+
+        dao.cycleHomeSort()
+        assertEquals(HomeSort.NEWEST_FIRST, dao.get()!!.homeSort)
+        dao.setThemeMode(ThemeMode.TOKYO_NIGHT)
+        dao.cycleHomeSort()
+        dao.cycleHomeSort()
+
+        val settings = dao.get()!!
+        assertEquals(HomeSort.ALPHABETICAL, settings.homeSort)
+        assertEquals(ThemeMode.TOKYO_NIGHT, settings.themeMode)
     }
 
     private fun completionCount(): Int =
