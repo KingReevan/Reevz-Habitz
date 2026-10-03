@@ -1,5 +1,6 @@
 package com.reevan.reevzhabitz.ui.common
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -46,8 +48,9 @@ private val MinCardHeight = 56.dp
  *
  * A coloured left edge carries the habit's icon in pure white; the name follows in the same colour
  * and wraps rather than running under [trailing]. [description] is shown only where a screen
- * asks for it (Remove, Edit, Statistics). [crossedOut] strikes the name through, for a habit done
- * today. Cards are stacked with no gaps — put a [HabitCardDivider] between them.
+ * asks for it (Remove, Edit, Statistics). [done] marks a habit ticked off on Home: the name is
+ * struck through and the edge and name fade to the theme's grey, so finished habits recede. Cards
+ * are stacked with no gaps — put a [HabitCardDivider] between them.
  */
 @Composable
 fun HabitCard(
@@ -56,11 +59,15 @@ fun HabitCard(
     icon: HabitIcon,
     modifier: Modifier = Modifier,
     description: String? = null,
-    crossedOut: Boolean = false,
+    done: Boolean = false,
     onClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
-    val habitColor = color.current
+    // Fades rather than snaps when a habit is ticked or unticked.
+    val habitColor by animateColorAsState(
+        targetValue = if (done) HabitzTheme.colors.doneHabit else color.current,
+        label = "habitColor",
+    )
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = modifier
@@ -95,7 +102,7 @@ fun HabitCard(
                 text = name,
                 color = habitColor,
                 style = MaterialTheme.typography.titleMedium,
-                textDecoration = if (crossedOut) TextDecoration.LineThrough else null,
+                textDecoration = if (done) TextDecoration.LineThrough else null,
             )
             if (!description.isNullOrBlank()) {
                 Text(
@@ -138,7 +145,7 @@ private fun SampleStack() {
                 name = "Gym",
                 color = HabitColors.forKey("coral"),
                 icon = HabitIcons.forKey("dumbbell"),
-                crossedOut = true,
+                done = true,
                 trailing = { Checkbox(checked = true, onCheckedChange = {}) },
             )
             HabitCardDivider()

@@ -158,7 +158,8 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
 - `ui/home/` — Home: today's habits via `HabitDao.observeDueOn(today)` (active, started, with a
   `done` flag for that day), ordered by `orderForHome` (to-do first, done last, each group in the
   chosen `HomeSort`; "newest" = most recently *created*). Only the checkbox ticks; unticking asks
-  first. The sort is remembered in `app_settings.homeSort`; the header icon shows the current one.
+  first. A ticked habit is struck through and its edge, name and checkbox fade to the theme's
+  `HabitzTheme.colors.doneHabit` grey (contrast pinned by `ThemeColorsTest`). The sort is remembered in `app_settings.homeSort`; the header icon shows the current one.
   `HomeViewModel` lives in the shell because the header's sort button needs it.
 - `app_settings` is written with per-column UPDATEs (`setThemeMode`, `cycleHomeSort`), never by
   rewriting the row, so two screens can't overwrite each other's preference.

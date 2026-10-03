@@ -23,6 +23,11 @@ data class HabitzColors(
     val isDark: Boolean,
     /** The thin line between stacked habit cards. */
     val divider: Color,
+    /**
+     * A habit ticked off on Home: its edge, name and checkbox all fade to this grey. Dark enough
+     * for the white icon to stay visible on it, light enough for the name to stay readable.
+     */
+    val doneHabit: Color,
     /** Statistics: a day the habit was done. */
     val done: Color,
     /** Statistics: a day the habit was due and not done. */
@@ -77,6 +82,7 @@ internal val LightScheme: ColorScheme = lightColorScheme(
 internal val LightHabitz = HabitzColors(
     isDark = false,
     divider = Color(0xFFDCDCE0),
+    doneHabit = Color(0xFF85878F),
     done = Color(0xFF2E7D32),
     missed = Color(0xFFC62828),
     future = Color(0xFFD0D0D5),
@@ -127,6 +133,7 @@ internal val DarkScheme: ColorScheme = darkColorScheme(
 internal val DarkHabitz = HabitzColors(
     isDark = true,
     divider = Color(0xFF2C2C2E),
+    doneHabit = Color(0xFF757575),
     done = Color(0xFF66BB6A),
     missed = Color(0xFFEF5350),
     future = Color(0xFF3A3A3D),
@@ -180,6 +187,7 @@ internal val VsCodeDarkScheme: ColorScheme = darkColorScheme(
 internal val VsCodeDarkHabitz = HabitzColors(
     isDark = true,
     divider = Color(0xFF333333),
+    doneHabit = Color(0xFF767676),
     done = Color(0xFF73C991),
     missed = Color(0xFFF14C4C),
     future = Color(0xFF3C3C3C),
@@ -230,6 +238,7 @@ internal val TokyoNightScheme: ColorScheme = darkColorScheme(
 internal val TokyoNightHabitz = HabitzColors(
     isDark = true,
     divider = Color(0xFF292E42),
+    doneHabit = Color(0xFF737AA2),
     done = Color(0xFF9ECE6A),
     missed = Color(0xFFF7768E),
     future = Color(0xFF3B4261),

@@ -34,7 +34,7 @@ import com.reevan.reevzhabitz.ui.common.HabitCard
 import com.reevan.reevzhabitz.ui.common.HabitCardDivider
 import com.reevan.reevzhabitz.ui.theme.HabitColors
 import com.reevan.reevzhabitz.ui.theme.HabitIcons
-import com.reevan.reevzhabitz.ui.theme.current
+import com.reevan.reevzhabitz.ui.theme.HabitzTheme
 
 /**
  * Today's habits as a gapless stack of cards. To-do habits sit on top; ticking one crosses it out
@@ -101,14 +101,15 @@ private fun HabitRow(item: HabitOnDay, onCheck: () -> Unit) {
         name = item.habit.name,
         color = color,
         icon = HabitIcons.forKey(item.habit.iconKey),
-        crossedOut = item.done,
+        done = item.done,
         trailing = {
             // Only the checkbox ticks; the card body is not a target.
             Checkbox(
                 checked = item.done,
                 onCheckedChange = { onCheck() },
                 colors = CheckboxDefaults.colors(
-                    checkedColor = color.current,
+                    // Only ever checked when done, so a checked box is always the done grey.
+                    checkedColor = HabitzTheme.colors.doneHabit,
                     checkmarkColor = Color.White,
                     uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),

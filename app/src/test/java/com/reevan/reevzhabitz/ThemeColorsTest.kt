@@ -56,6 +56,15 @@ class ThemeColorsTest {
     }
 
     @Test
+    fun doneHabitGrey_keepsIconAndNameLegibleInEveryTheme() {
+        ThemeMode.entries.forEach { mode ->
+            val grey = mode.habitzColors().doneHabit
+            assertContrast(3.0, Color.White, grey, "$mode white icon on done edge")
+            assertContrast(3.0, grey, mode.colorScheme().background, "$mode done name")
+        }
+    }
+
+    @Test
     fun habitColours_whiteIconsAndNamesAreReadableInEveryTheme() {
         HabitColors.all.forEach { color ->
             ThemeMode.entries.forEach { mode ->
