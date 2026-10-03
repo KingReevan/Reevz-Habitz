@@ -192,6 +192,26 @@ class AppFlowsTest {
     }
 
     @Test
+    fun home_untickPromptCloses_ifTheHabitStopsBeingDoneWhileItIsOpen() {
+        // What midnight does to an open "Mark as not done?" prompt: the new day has no tick, so
+        // the habit is no longer done. Simulated by removing today's tick directly.
+        val (id) = insert(habit("Stale Prompt"))
+        runBlocking { db.completionDao().markDone(Completion(id, today)) }
+        waitForText("Stale Prompt")
+        rule.waitUntil(10_000) {
+            runCatching { rule.onNodeWithContentDescription("Stale Prompt").assertIsOn() }.isSuccess
+        }
+        rule.onNodeWithContentDescription("Stale Prompt").performClick()
+        waitForText("Mark as not done?")
+
+        runBlocking { db.completionDao().markNotDone(id, today) }
+
+        rule.waitUntil(10_000) {
+            rule.onAllNodesWithText("Mark as not done?").fetchSemanticsNodes().isEmpty()
+        }
+    }
+
+    @Test
     fun home_sortCyclesThroughThreeOrdersAndIsRemembered() {
         val now = System.currentTimeMillis()
         insert(
@@ -365,6 +385,29 @@ class AppFlowsTest {
     }
 
     @Test
+    fun addHabit_rotatingRightAfterCreate_stillLeavesOnceWithOneHabit() {
+        openFromMenu("ADD HABIT")
+        waitForText("Create")
+        rule.onNodeWithText("Habit name").performTextInput("rotated create")
+        rule.onNodeWithText("Description").performTextInput("Mid-save rotation.")
+        rule.onNodeWithContentDescription("Sky").performScrollTo().performClick()
+        rule.onNodeWithContentDescription("Water").performScrollTo().performClick()
+
+        // Rotate straight after Create, while the insert may still be running. Whichever finishes
+        // first, the new screen must still leave, and Create must not be live again meanwhile.
+        rule.onNodeWithText("Create").performClick()
+        rule.activityRule.scenario.recreate()
+
+        waitForText("ADD HABIT")
+        rule.waitForIdle()
+        val count = db.openHelper.readableDatabase
+            .query("SELECT COUNT(*) FROM habits WHERE name = 'Rotated Create'")
+            .use { it.moveToFirst(); it.getInt(0) }
+        assertEquals(1, count)
+        waitForCrumbs("Home", "Menu")
+    }
+
+    @Test
     fun editHabit_doubleTapOnSave_returnsToTheListOnce() {
         insert(habit("Twice Saved", color = "coral"))
         openFromMenu("EDIT HABIT")
@@ -431,6 +474,25 @@ class AppFlowsTest {
         waitForText("ADD HABIT")
         waitFor { runBlocking { db.habitDao().getById(gone) } == null }
         assertTrue("completions cascaded", !isDone(gone))
+    }
+
+    @Test
+    fun removeHabit_notStartedYet_saysThereIsNoHistoryToKeep() {
+        val (id) = insert(habit("Scheduled", start = today.plusDays(3)))
+        openFromMenu("REMOVE HABIT")
+        waitForText("Scheduled")
+        rule.onNodeWithContentDescription("Scheduled").performClick()
+        rule.onNodeWithText("Remove Habit(s)").performClick()
+        waitForText("Remove this habit?")
+        rule.onNodeWithText("It hasn't started yet, so there is no history to keep.")
+            .assertIsDisplayed()
+        rule.onNodeWithText("Remove").performClick()
+        waitForText("ADD HABIT")
+        waitFor { runBlocking { db.habitDao().getById(id) } == null }
+
+        // So Settings has no phantom "deleted habit with stats" to count.
+        rule.onNodeWithText("SETTINGS").performClick()
+        waitForText("No deleted habits have stats kept.")
     }
 
     @Test

@@ -10,11 +10,11 @@ import androidx.room.TypeConverters
  * Schema history:
  * - v1: `habits`, `completions`, `app_settings`
  *
- * v1 has not been installed on the phone yet, so it may still be edited in place. Once it has,
- * version bumps must add a migration here. Adding a table, or a nullable column, is purely
- * additive, so Room generates the migration from the exported schemas in `app/schemas/` via
- * `autoMigrations = [AutoMigration(from = n, to = n + 1)]`. Never use
- * fallbackToDestructiveMigration — logged habit history is not recoverable.
+ * v1 has been on the phone, holding real habit history, since 2026-10-03: it is frozen. Never
+ * edit it in place — every schema change is a version bump plus a migration here. Adding a
+ * table, or a nullable column, is purely additive, so Room generates the migration from the
+ * exported schemas in `app/schemas/` via `autoMigrations = [AutoMigration(from = n, to = n + 1)]`.
+ * Never use fallbackToDestructiveMigration — logged habit history is not recoverable.
  */
 @Database(
     entities = [

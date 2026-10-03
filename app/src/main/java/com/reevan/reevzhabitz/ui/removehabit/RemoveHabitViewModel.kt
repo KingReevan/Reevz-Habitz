@@ -10,6 +10,7 @@ import com.reevan.reevzhabitz.data.AppSettingsDao
 import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDao
 import com.reevan.reevzhabitz.data.HabitDatabase
+import com.reevan.reevzhabitz.ui.common.SubmissionTracker
 import com.reevan.reevzhabitz.ui.common.activeHabitsInHomeOrder
 import com.reevan.reevzhabitz.util.TodayClock
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,11 +35,14 @@ class RemoveHabitViewModel(
         activeHabitsInHomeOrder(habitDao, settingsDao)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
-    fun remove(ids: List<Long>, keepStats: Boolean, onRemoved: () -> Unit) {
+    /** Remove's submissions; the screen watches it to leave once the habits are gone. */
+    val submissions = SubmissionTracker()
+
+    fun remove(token: String, ids: List<Long>, keepStats: Boolean) {
         val day = today.value
         viewModelScope.launch {
             habitDao.remove(ids, keepStats, day)
-            onRemoved()
+            submissions.complete(token)
         }
     }
 

@@ -42,5 +42,13 @@ data class HabitDraft(
 /** Start From's default: habits begin tomorrow unless the user picks otherwise. */
 fun defaultStartDate(today: LocalDate): LocalDate = today.plusDays(1)
 
+/**
+ * The start date the form shows and saves: the user's pick ([pickedEpochDay]) if they made one,
+ * otherwise the default for the current [today]. So an untouched form left open past midnight
+ * still starts the habit tomorrow, as the spec asks, rather than on the new today.
+ */
+fun startDateFor(pickedEpochDay: Long?, today: LocalDate): LocalDate =
+    pickedEpochDay?.let(LocalDate::ofEpochDay) ?: defaultStartDate(today)
+
 /** Start From allows today or later, never a past day. */
 fun isSelectableStartDate(date: LocalDate, today: LocalDate): Boolean = !date.isBefore(today)

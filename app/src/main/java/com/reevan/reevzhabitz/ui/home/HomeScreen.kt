@@ -73,7 +73,11 @@ fun HomeScreen(
         }
     }
 
-    val undoing = confirmingUndo?.let { id -> state.habits.firstOrNull { it.habit.id == id } }
+    // Only while that habit is still done: if it stops being done with the prompt open — at
+    // midnight the new day starts unticked — the prompt has nothing left to ask, so it closes.
+    val undoing = confirmingUndo?.let { id ->
+        state.habits.firstOrNull { it.habit.id == id && it.done }
+    }
     if (undoing != null) {
         AlertDialog(
             onDismissRequest = { confirmingUndo = null },

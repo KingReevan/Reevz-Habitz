@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.reevan.reevzhabitz.data.HabitDao
 import com.reevan.reevzhabitz.data.HabitDatabase
+import com.reevan.reevzhabitz.ui.common.SubmissionTracker
 import com.reevan.reevzhabitz.ui.habitform.HabitDraft
 import com.reevan.reevzhabitz.util.TodayClock
 import kotlinx.coroutines.flow.StateFlow
@@ -25,11 +26,14 @@ class AddHabitViewModel(
     private val now: () -> Long = System::currentTimeMillis,
 ) : ViewModel() {
 
-    fun create(draft: HabitDraft, onCreated: () -> Unit) {
+    /** Create's submissions; the screen watches it to leave once its habit is saved. */
+    val submissions = SubmissionTracker()
+
+    fun create(token: String, draft: HabitDraft) {
         val habit = draft.toHabit(today = today.value, createdAt = now())
         viewModelScope.launch {
             habitDao.insert(habit)
-            onCreated()
+            submissions.complete(token)
         }
     }
 

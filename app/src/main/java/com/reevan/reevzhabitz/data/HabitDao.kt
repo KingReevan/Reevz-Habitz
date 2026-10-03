@@ -60,9 +60,19 @@ interface HabitDao {
     @Query("SELECT COUNT(*) FROM habits WHERE deletedOn IS NOT NULL")
     fun observeDeletedCount(): Flow<Int>
 
-    /** Removes habits but keeps them, and their completions, for Statistics. */
-    @Query("UPDATE habits SET deletedOn = :on WHERE id IN (:ids) AND deletedOn IS NULL")
-    suspend fun softDelete(ids: List<Long>, on: LocalDate)
+    /**
+     * Removes habits that have started by [on] but keeps them, and their completions, for
+     * Statistics.
+     */
+    @Query(
+        "UPDATE habits SET deletedOn = :on " +
+            "WHERE id IN (:ids) AND deletedOn IS NULL AND startDate <= :on",
+    )
+    suspend fun softDeleteStarted(ids: List<Long>, on: LocalDate)
+
+    /** Deletes those of [ids] that haven't started by [on] — they have no history to keep. */
+    @Query("DELETE FROM habits WHERE id IN (:ids) AND startDate > :on")
+    suspend fun hardDeleteNotStarted(ids: List<Long>, on: LocalDate)
 
     /** Deletes habits for good. Their completions go with them (ON DELETE CASCADE). */
     @Query("DELETE FROM habits WHERE id IN (:ids)")
@@ -70,11 +80,21 @@ interface HabitDao {
 
     /**
      * Remove Habit's single entry point. With [keepStats] the habits are only marked removed as of
-     * [today]; without it they and their whole history are deleted.
+     * [today], so Statistics still shows them; without it they and their whole history are
+     * deleted.
+     *
+     * A habit that hasn't started yet is deleted either way: it can't have been ticked, so there
+     * is no history to keep, and Statistics never lists a habit that didn't start. Keeping it
+     * would only leave a phantom "deleted habit with stats" for Settings to count.
      */
     @Transaction
     suspend fun remove(ids: List<Long>, keepStats: Boolean, today: LocalDate) {
-        if (keepStats) softDelete(ids, today) else hardDelete(ids)
+        if (keepStats) {
+            softDeleteStarted(ids, today)
+            hardDeleteNotStarted(ids, today)
+        } else {
+            hardDelete(ids)
+        }
     }
 
     /**

@@ -149,6 +149,18 @@ class HabitDatabaseTest {
     }
 
     @Test
+    fun remove_keepingStats_deletesHabitsThatHaveNotStarted() = runBlocking {
+        val started = db.habitDao().insert(habit("Started").copy(startDate = day))
+        val notYet = db.habitDao().insert(habit("Not Yet").copy(startDate = day.plusDays(1)))
+
+        db.habitDao().remove(listOf(started, notYet), keepStats = true, today = day)
+
+        assertEquals(day, db.habitDao().getById(started)!!.deletedOn)
+        assertNull(db.habitDao().getById(notYet))                   // nothing to keep
+        assertEquals(1, db.habitDao().observeDeletedCount().first())
+    }
+
+    @Test
     fun remove_withoutStats_deletesTheHabitAndItsHistory() = runBlocking {
         val gone = db.habitDao().insert(habit("Gone"))
         val other = db.habitDao().insert(habit("Other"))

@@ -26,7 +26,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -41,10 +40,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.ui.common.HabitCard
+import com.reevan.reevzhabitz.ui.common.rememberSubmission
 import com.reevan.reevzhabitz.ui.common.HabitCardDivider
 import com.reevan.reevzhabitz.ui.theme.HabitColors
 import com.reevan.reevzhabitz.ui.theme.HabitIcons
 import com.reevan.reevzhabitz.ui.theme.current
+import java.time.LocalDate
 
 /**
  * Remove Habit: tick any number of habits, then Remove Habit(s) at the bottom right. A dialog
@@ -53,10 +54,14 @@ import com.reevan.reevzhabitz.ui.theme.current
  */
 @Composable
 fun RemoveHabitScreen(
+    today: LocalDate,
     onRemoved: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: RemoveHabitViewModel = viewModel(factory = RemoveHabitViewModel.Factory),
 ) {
+    // Before any early return: removing the last habit empties the list, and this must still be
+    // composed then to see the removal finish and leave the screen.
+    val removing = rememberSubmission(viewModel.submissions, onFinished = onRemoved)
     val habits by viewModel.habits.collectAsStateWithLifecycle()
     val all = habits ?: return
     if (all.isEmpty()) {
@@ -79,7 +84,6 @@ fun RemoveHabitScreen(
     // A List rather than a Set: rememberSaveable can put a List of Longs in a Bundle.
     var selectedIds by rememberSaveable { mutableStateOf(emptyList<Long>()) }
     var confirming by rememberSaveable { mutableStateOf(false) }
-    var removing by remember { mutableStateOf(false) }
     // Ignore any selected id whose habit has since disappeared.
     val selected = all.filter { it.id in selectedIds }
 
@@ -114,7 +118,7 @@ fun RemoveHabitScreen(
             )
             Button(
                 onClick = { confirming = true },
-                enabled = selected.isNotEmpty() && !removing,
+                enabled = selected.isNotEmpty() && !removing.inProgress,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError,
@@ -129,12 +133,11 @@ fun RemoveHabitScreen(
     if (confirming && selected.isNotEmpty()) {
         ConfirmRemoveDialog(
             habits = selected,
+            anyStarted = selected.any { !it.startDate.isAfter(today) },
             onConfirm = { keepStats ->
-                // Checked at tap time: the dialog only disappears on the next frame.
-                if (!removing) {
+                removing.start()?.let { token ->
                     confirming = false
-                    removing = true
-                    viewModel.remove(selected.map { it.id }, keepStats, onRemoved)
+                    viewModel.remove(token, selected.map { it.id }, keepStats)
                 }
             },
             onDismiss = { confirming = false },
@@ -173,6 +176,8 @@ private fun SelectableHabitCard(
 @Composable
 private fun ConfirmRemoveDialog(
     habits: List<Habit>,
+    /** False when none of [habits] has reached its start date, so none has history to keep. */
+    anyStarted: Boolean,
     onConfirm: (keepStats: Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -211,10 +216,11 @@ private fun ConfirmRemoveDialog(
                 }
                 val history = if (count == 1) "Its history" else "Their history"
                 Text(
-                    text = if (keepStats) {
-                        "$history stays in Statistics, under Deleted."
-                    } else {
-                        "$history is deleted for good. This can't be undone."
+                    text = when {
+                        !keepStats -> "$history is deleted for good. This can't be undone."
+                        anyStarted -> "$history stays in Statistics, under Deleted."
+                        count == 1 -> "It hasn't started yet, so there is no history to keep."
+                        else -> "They haven't started yet, so there is no history to keep."
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = if (keepStats) {

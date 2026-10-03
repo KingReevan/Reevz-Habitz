@@ -14,7 +14,20 @@ import androidx.compose.runtime.saveable.listSaver
 
 val InitialBackStack: List<Destination> = listOf(Destination.Home)
 
-fun List<Destination>.push(destination: Destination): List<Destination> = this + destination
+/**
+ * Opens [destination] on top. Opening the screen that is already on top does nothing, so two taps
+ * landing before the new screen appears can't stack it twice (`... > Add Habit > Add Habit`).
+ */
+fun List<Destination>.push(destination: Destination): List<Destination> =
+    if (lastOrNull() == destination) this else this + destination
+
+/**
+ * Opens [destination] on top of [from] — but only if [from] is still the screen on top. Two
+ * taps landing in the same frame (two fingers on two Menu buttons, say) would otherwise stack
+ * both screens: the second tap comes from a screen that is no longer showing, so it is ignored.
+ */
+fun List<Destination>.pushFrom(from: Destination, destination: Destination): List<Destination> =
+    if (lastOrNull() == from) push(destination) else this
 
 /** Drops the top screen. Never empties the stack: Home stays. */
 fun List<Destination>.pop(): List<Destination> = if (size > 1) dropLast(1) else this

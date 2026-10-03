@@ -7,6 +7,7 @@ import com.reevan.reevzhabitz.ui.navigation.pop
 import com.reevan.reevzhabitz.ui.navigation.popIfCurrent
 import com.reevan.reevzhabitz.ui.navigation.popTo
 import com.reevan.reevzhabitz.ui.navigation.push
+import com.reevan.reevzhabitz.ui.navigation.pushFrom
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -25,6 +26,25 @@ class BackStackTest {
         assertEquals(Destination.AddHabit, add.last())
         assertEquals(menu, add.pop())
         assertEquals(InitialBackStack, add.pop().pop())
+    }
+
+    @Test
+    fun push_theScreenAlreadyOnTop_doesNotStackItTwice() {
+        val adding = InitialBackStack.push(Destination.Menu).push(Destination.AddHabit)
+        assertEquals(adding, adding.push(Destination.AddHabit))
+        val editing = adding.push(Destination.EditHabit(1))
+        assertEquals(editing, editing.push(Destination.EditHabit(1)))
+        // A different habit is a different screen.
+        assertEquals(editing + Destination.EditHabit(2), editing.push(Destination.EditHabit(2)))
+    }
+
+    @Test
+    fun pushFrom_onlyOpensFromTheScreenOnTop() {
+        val menu = InitialBackStack.push(Destination.Menu)
+        val adding = menu.pushFrom(Destination.Menu, Destination.AddHabit)
+        assertEquals(menu + Destination.AddHabit, adding)
+        // A second tap in the same frame, from the Menu that is no longer showing: ignored.
+        assertEquals(adding, adding.pushFrom(Destination.Menu, Destination.RemoveHabit))
     }
 
     @Test

@@ -44,7 +44,7 @@ import com.reevan.reevzhabitz.ui.theme.current
 import com.reevan.reevzhabitz.util.capitalizeWords
 
 /*
- * Form pieces shared by Add Habit and, from Phase 6, the Edit Habit editor.
+ * Form pieces shared by Add Habit and the Edit Habit editor.
  */
 
 /** Every option cell is a full 48dp touch target. */

@@ -37,7 +37,7 @@ import com.reevan.reevzhabitz.ui.navigation.breadcrumbs
 import com.reevan.reevzhabitz.ui.navigation.pop
 import com.reevan.reevzhabitz.ui.navigation.popIfCurrent
 import com.reevan.reevzhabitz.ui.navigation.popTo
-import com.reevan.reevzhabitz.ui.navigation.push
+import com.reevan.reevzhabitz.ui.navigation.pushFrom
 import com.reevan.reevzhabitz.ui.removehabit.RemoveHabitScreen
 import com.reevan.reevzhabitz.ui.settings.SettingsScreen
 import com.reevan.reevzhabitz.ui.statistics.HabitStatisticsScreen
@@ -63,7 +63,9 @@ fun ReevzHabitzApp() {
     val home: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
     val homeState by home.state.collectAsStateWithLifecycle()
 
-    val navigate: (Destination) -> Unit = { backStack = backStack.push(it) }
+    // Opens a screen from the one showing in this composition; ignored if that one is no longer
+    // on top (a second tap in the same frame).
+    val navigate: (Destination) -> Unit = { backStack = backStack.pushFrom(current, it) }
 
     // Leaving the screen on top for [target] — system back, the header arrow or a breadcrumb.
     // The screen may hold it up (the Edit Habit editor, to ask before discarding changes) and
@@ -124,6 +126,7 @@ fun ReevzHabitzApp() {
                     onCreated = finish(Destination.AddHabit),
                 )
                 Destination.RemoveHabit -> RemoveHabitScreen(
+                    today = today,
                     onRemoved = finish(Destination.RemoveHabit),
                 )
                 Destination.EditHabitList -> EditHabitListScreen(

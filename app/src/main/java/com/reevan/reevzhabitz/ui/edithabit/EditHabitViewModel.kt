@@ -10,6 +10,7 @@ import com.reevan.reevzhabitz.data.AppSettingsDao
 import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDao
 import com.reevan.reevzhabitz.data.HabitDatabase
+import com.reevan.reevzhabitz.ui.common.SubmissionTracker
 import com.reevan.reevzhabitz.ui.common.activeHabitsInHomeOrder
 import com.reevan.reevzhabitz.ui.habitform.HabitEdits
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,11 +37,14 @@ class EditHabitViewModel(
     suspend fun load(habitId: Long): Habit? =
         habitDao.getById(habitId)?.takeIf { it.deletedOn == null }
 
-    fun save(original: Habit, edits: HabitEdits, onSaved: () -> Unit) {
+    /** Save's submissions; the editor watches it to leave once the change is stored. */
+    val submissions = SubmissionTracker()
+
+    fun save(token: String, original: Habit, edits: HabitEdits) {
         val updated = edits.applyTo(original)
         viewModelScope.launch {
             habitDao.update(updated)
-            onSaved()
+            submissions.complete(token)
         }
     }
 

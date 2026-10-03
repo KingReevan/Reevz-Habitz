@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reevan.reevzhabitz.data.Habit
+import com.reevan.reevzhabitz.ui.common.rememberSubmission
 import com.reevan.reevzhabitz.ui.habitform.HabitDetailsFields
 import com.reevan.reevzhabitz.ui.habitform.HabitEdits
 import com.reevan.reevzhabitz.ui.habitform.HabitFormScaffold
@@ -52,7 +53,7 @@ fun EditHabitScreen(
     // Where the user tried to go with unsaved changes, while "Discard changes?" is up. Saved as
     // routes, so after a rotation Discard still lands on the screen they chose.
     var pendingLeave by rememberSaveable { mutableStateOf<List<String>?>(null) }
-    var saving by remember { mutableStateOf(false) }
+    val saving = rememberSubmission(viewModel.submissions, onFinished = onDone)
 
     LaunchedEffect(habitId) {
         val habit = viewModel.load(habitId)
@@ -80,20 +81,14 @@ fun EditHabitScreen(
     )
     val changed = edits.changes(stored)
 
-    leaveGuard.InterceptLeaving(enabled = changed && !saving) { target ->
+    leaveGuard.InterceptLeaving(enabled = changed && !saving.inProgress) { target ->
         pendingLeave = target.map { it.route }
     }
 
     HabitFormScaffold(
         actionLabel = "Save",
-        actionEnabled = changed && edits.isComplete && !saving,
-        onAction = {
-            // Checked at tap time, not just via `enabled`, which only updates on the next frame.
-            if (!saving) {
-                saving = true
-                viewModel.save(stored, edits, onDone)
-            }
-        },
+        actionEnabled = changed && edits.isComplete && !saving.inProgress,
+        onAction = { saving.start()?.let { viewModel.save(it, stored, edits) } },
         modifier = modifier,
     ) {
         HabitDetailsFields(

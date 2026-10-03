@@ -3,6 +3,7 @@ package com.reevan.reevzhabitz
 import com.reevan.reevzhabitz.ui.habitform.HabitDraft
 import com.reevan.reevzhabitz.ui.habitform.defaultStartDate
 import com.reevan.reevzhabitz.ui.habitform.isSelectableStartDate
+import com.reevan.reevzhabitz.ui.habitform.startDateFor
 import com.reevan.reevzhabitz.util.datePickerMillisToLocalDate
 import com.reevan.reevzhabitz.util.formatLongDate
 import com.reevan.reevzhabitz.util.toDatePickerMillis
@@ -78,6 +79,16 @@ class HabitDraftTest {
         assertTrue(isSelectableStartDate(today, today))
         assertTrue(isSelectableStartDate(today.plusYears(1), today))
         assertFalse(isSelectableStartDate(today.minusDays(1), today))
+    }
+
+    @Test
+    fun startDate_untouchedFollowsTomorrowAcrossMidnight_pickedStaysPut() {
+        // Form opened on the 3rd; the user leaves Start From alone and creates after midnight.
+        assertEquals(LocalDate.of(2026, 10, 4), startDateFor(null, today))
+        assertEquals(LocalDate.of(2026, 10, 5), startDateFor(null, today.plusDays(1)))
+        // A date the user picked is theirs, whatever the clock does.
+        val picked = LocalDate.of(2026, 10, 9).toEpochDay()
+        assertEquals(LocalDate.of(2026, 10, 9), startDateFor(picked, today.plusDays(1)))
     }
 
     @Test

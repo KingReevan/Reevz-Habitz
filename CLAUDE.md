@@ -184,6 +184,16 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   `ui/common/activeHabitsInHomeOrder`) → editor for name/description/colour/icon only. Save is
   enabled only for a real, complete change (`HabitEdits.changes`, normalised like Add). Back with
   changes asks "Discard changes?". The editor is `key`ed by habit id in the shell.
+- **One-shot actions (Create, Save, Remove) use `ui/common/Submission`.** The ViewModel owns a
+  `SubmissionTracker` and marks a token done when its write finishes; the screen holds the token
+  (`rememberSubmission`, saved across rotation) and leaves when it sees it done. Never pass a
+  "done" callback into an activity-scoped ViewModel: after a rotation it lands on a dead
+  composition, the screen never closes, and Create could insert twice. Call `rememberSubmission`
+  before any early return in the screen.
+- Forward navigation is `pushFrom(current, to)`: only the screen on top can open another, so two
+  taps in one frame can't stack two screens.
+- Remove with "Keep stats" soft-deletes only habits that have started; not-yet-started habits
+  have no history and are deleted outright (`HabitDao.remove`).
 - **Leaving a screen goes through `ui/navigation/LeaveGuard`.** System back, the header arrow and
   a tapped breadcrumb all call the shell's `leaveTo(target stack)`; the screen on top can hold it
   up with `InterceptLeaving` (the Edit Habit editor, to ask "Discard changes?") and later approve
