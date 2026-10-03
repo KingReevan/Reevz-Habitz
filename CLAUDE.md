@@ -113,6 +113,12 @@ Add a flow test here when adding or changing a user-facing flow.
 - **No backups, by the owner's choice.** `allowBackup="false"`, and `data_extraction_rules.xml` /
   `backup_rules.xml` exclude every domain from cloud backup *and* device-to-device transfer, so
   habit data never leaves the phone. Don't re-enable either without asking.
+- **Editing a habit must never change its statistics.** Edit only rewrites name, description,
+  colour and icon via `HabitDao.update` (an in-place SQL UPDATE); id, start date, creation time
+  and completions stay put. Never save habits with `OnConflictStrategy.REPLACE` — SQLite does it
+  as delete + insert, and the delete cascades through `completions`. Pinned by
+  `HabitDatabaseTest.editingAHabit_keepsItsHistoryAndScheduleIntact` and
+  `AppFlowsTest.editingAHabit_leavesItsStatisticsExactlyAsTheyWere`.
 - Do not delete or reset user data as part of a normal feature implementation. Treat logged habit
   history as valuable and non-recoverable.
 

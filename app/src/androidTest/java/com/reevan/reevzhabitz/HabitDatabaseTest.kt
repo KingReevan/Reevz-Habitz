@@ -8,6 +8,7 @@ import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDatabase
 import com.reevan.reevzhabitz.data.HomeSort
 import com.reevan.reevzhabitz.data.ThemeMode
+import com.reevan.reevzhabitz.ui.habitform.HabitEdits
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -208,6 +209,37 @@ class HabitDatabaseTest {
         assertEquals(listOf(kept), db.habitDao().observeDeleted().first().map { it.id })
         assertEquals(day.plusDays(3), db.habitDao().observeById(kept).first()!!.deletedOn)
         assertNull(db.habitDao().observeById(9999).first())
+    }
+
+    @Test
+    fun editingAHabit_keepsItsHistoryAndScheduleIntact() = runBlocking {
+        val original = habit("Before").copy(startDate = day.minusDays(30), createdAt = 1_234L)
+        val id = db.habitDao().insert(original)
+        val other = db.habitDao().insert(habit("Other"))
+        val ticked = (0L..30L step 2).map { day.minusDays(it) }
+        ticked.forEach { db.completionDao().markDone(Completion(id, it)) }
+        db.completionDao().markDone(Completion(other, day))
+
+        // Exactly what the Edit Habit editor saves: all four editable fields changed.
+        val stored = db.habitDao().getById(id)!!
+        val edited = HabitEdits(
+            name = "after the edit",
+            description = "New description.",
+            colorKey = "green",
+            iconKey = "coffee",
+        ).applyTo(stored)
+        db.habitDao().update(edited)
+
+        val after = db.habitDao().getById(id)!!
+        assertEquals("After The Edit", after.name)
+        assertEquals("green", after.colorKey)
+        // What the statistics are computed from — none of it may move.
+        assertEquals(stored.id, after.id)
+        assertEquals(stored.startDate, after.startDate)
+        assertEquals(stored.createdAt, after.createdAt)
+        assertEquals(stored.deletedOn, after.deletedOn)
+        assertEquals(ticked.toSet(), db.completionDao().observeDatesFor(id).first().toSet())
+        assertEquals(ticked.size + 1, completionCount())
     }
 
     private fun completionCount(): Int =

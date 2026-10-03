@@ -12,6 +12,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -410,6 +411,82 @@ class AppFlowsTest {
         rule.onNodeWithText("4/5").assertIsDisplayed()
         // Current: yesterday + today. Longest: also 2 (4–3 days ago, or yesterday + today).
         rule.onAllNodesWithText("2 days").assertCountEquals(2)
+    }
+
+    @Test
+    fun editingAHabit_leavesItsStatisticsExactlyAsTheyWere() {
+        // 21 due days (20 days ago .. today), missed 15, 9 and 4 days ago, today done:
+        // 18/21, current streak 4 (3 days ago .. today), longest 5.
+        val (id) = insert(
+            habit("Before Edit", start = today.minusDays(20), color = "coral", icon = "dumbbell"),
+        )
+        val missed = setOf(15L, 9L, 4L)
+        runBlocking {
+            (0L..20L).filter { it !in missed }.forEach {
+                db.completionDao().markDone(Completion(id, today.minusDays(it)))
+            }
+        }
+
+        fun openStatsFor(name: String) {
+            openFromMenu("STATISTICS")
+            waitForText(name)
+            rule.onNodeWithText(name).performClick()
+            waitForText("Home  >  Menu  >  Statistics  >  Stats")
+            rule.onNodeWithText(name).performClick()           // expand the strip
+            waitForText("Days done")
+        }
+
+        /** Everything Statistics shows for the habit: the strip's numbers and the calendar. */
+        fun snapshot(): List<String> {
+            val numbers = listOf("18/21", "4 days", "5 days").map { text ->
+                "$text×" + rule.onAllNodesWithText(text).fetchSemanticsNodes().size
+            }
+            val days = listOf("done", "missed", "upcoming").map { status ->
+                "$status×" + rule.onAllNodes(hasContentDescription(", $status", substring = true))
+                    .fetchSemanticsNodes().size
+            }
+            return numbers + days
+        }
+
+        fun backToHome() {
+            repeat(3) {
+                rule.onNodeWithContentDescription("Back").performClick()
+                rule.waitForIdle()
+            }
+            rule.waitUntilAtLeastOneExists(hasContentDescription("Menu"))
+        }
+
+        openStatsFor("Before Edit")
+        val before = snapshot()
+        assertTrue("numbers are on screen: $before", before.take(3).none { it.endsWith("×0") })
+        backToHome()
+
+        // Edit every editable field.
+        openFromMenu("EDIT HABIT")
+        waitForText("Before Edit")
+        rule.onNodeWithText("Before Edit").performClick()
+        waitForText("Save")
+        rule.onNodeWithText("Before Edit").performTextClearance()
+        rule.onNodeWithText("Habit name").performTextInput("after edit")
+        rule.onNodeWithText("About Before Edit.").performTextClearance()
+        rule.onNodeWithText("Description").performTextInput("Changed.")
+        rule.onNodeWithContentDescription("Green").performScrollTo().performClick()
+        rule.onNodeWithContentDescription("Coffee").performScrollTo().performClick()
+        rule.onNodeWithText("Save").performClick()
+        waitForText("After Edit")                               // back on the Edit list
+        rule.onNodeWithContentDescription("Back").performClick()
+        waitForText("ADD HABIT")
+        rule.onNodeWithContentDescription("Back").performClick()
+        rule.waitUntilAtLeastOneExists(hasContentDescription("Menu"))
+
+        openStatsFor("After Edit")
+        assertEquals(before, snapshot())
+
+        val saved = runBlocking { db.habitDao().getById(id)!! }
+        assertEquals("After Edit", saved.name)
+        assertEquals("green", saved.colorKey)
+        assertEquals("coffee", saved.iconKey)
+        assertEquals(today.minusDays(20), saved.startDate)
     }
 
     @Test

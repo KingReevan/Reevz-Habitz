@@ -15,6 +15,12 @@ interface HabitDao {
     @Insert
     suspend fun insert(habit: Habit): Long
 
+    /**
+     * Rewrites the row in place (SQL UPDATE), so the habit keeps its id and every completion keyed
+     * to it — editing a habit never touches its statistics. Never change this to an insert with
+     * OnConflictStrategy.REPLACE: SQLite implements REPLACE as delete-then-insert, and the delete
+     * would cascade and wipe the habit's whole history.
+     */
     @Update
     suspend fun update(habit: Habit)
 
