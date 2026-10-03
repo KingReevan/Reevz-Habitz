@@ -37,7 +37,7 @@ import com.reevan.reevzhabitz.util.toDatePickerMillis
 import java.time.LocalDate
 
 /**
- * Add Habit: name, description, colour, icon and start date, then Create — which saves the habit
+ * Add Habit: name, description, start date, colour and icon, then Create — which saves the habit
  * and returns to the Menu via [onCreated].
  */
 @Composable
@@ -86,15 +86,17 @@ fun AddHabitScreen(
             onColorChange = { colorKey = it },
             iconKey = iconKey,
             onIconChange = { iconKey = it },
+            afterDescription = {
+                Column {
+                    FormSectionTitle(title = "Start from")
+                    StartDateField(
+                        date = draft.startDate,
+                        today = today,
+                        onDateChange = { startEpochDay = it.toEpochDay() },
+                    )
+                }
+            },
         )
-        Column {
-            FormSectionTitle(title = "Start from")
-            StartDateField(
-                date = draft.startDate,
-                today = today,
-                onDateChange = { startEpochDay = it.toEpochDay() },
-            )
-        }
     }
 }
 

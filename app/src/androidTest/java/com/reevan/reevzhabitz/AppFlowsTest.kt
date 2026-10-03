@@ -315,6 +315,11 @@ class AppFlowsTest {
         val create = rule.onNodeWithText("Create")
         create.assertIsNotEnabled()
 
+        // Start From sits right under Description, above the tall colour and icon pickers.
+        assertTrue(top("Description") < top("Start from"))
+        assertTrue(top("Start from") < top("Colour"))
+        assertTrue(top("Colour") < top("Icon"))
+
         rule.onNodeWithText("Habit name").performTextInput("drink water")
         create.assertIsNotEnabled()
         rule.onNodeWithText("Description").performTextInput("Eight glasses.")

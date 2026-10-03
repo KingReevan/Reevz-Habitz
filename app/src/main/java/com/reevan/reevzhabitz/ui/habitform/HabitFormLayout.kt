@@ -61,7 +61,13 @@ fun HabitFormScaffold(
     }
 }
 
-/** Name, description, colour and icon — the four fields Add and Edit have in common. */
+/**
+ * Name, description, colour and icon — the four fields Add and Edit have in common.
+ *
+ * [afterDescription] is a slot between the text fields and the pickers, for fields a screen adds
+ * of its own (Add Habit's Start From). It sits above the colour and icon grids because they are
+ * tall: anything below them is a long scroll away.
+ */
 @Composable
 fun HabitDetailsFields(
     name: TextFieldState,
@@ -71,11 +77,13 @@ fun HabitDetailsFields(
     onColorChange: (String) -> Unit,
     iconKey: String?,
     onIconChange: (String) -> Unit,
+    afterDescription: @Composable () -> Unit = {},
 ) {
     val color = colorKey?.let(HabitColors::forKey)
 
     HabitNameField(state = name)
     HabitDescriptionField(value = description, onValueChange = onDescriptionChange)
+    afterDescription()
 
     Column {
         FormSectionTitle(
