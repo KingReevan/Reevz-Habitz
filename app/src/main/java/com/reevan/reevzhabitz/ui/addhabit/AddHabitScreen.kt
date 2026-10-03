@@ -70,8 +70,11 @@ fun AddHabitScreen(
         actionLabel = "Create",
         actionEnabled = draft.isComplete && !creating,
         onAction = {
-            creating = true
-            viewModel.create(draft, onCreated)
+            // Checked at tap time, not just via `enabled`, which only updates on the next frame.
+            if (!creating) {
+                creating = true
+                viewModel.create(draft, onCreated)
+            }
         },
         modifier = modifier,
     ) {

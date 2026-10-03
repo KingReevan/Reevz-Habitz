@@ -130,9 +130,12 @@ fun RemoveHabitScreen(
         ConfirmRemoveDialog(
             habits = selected,
             onConfirm = { keepStats ->
-                confirming = false
-                removing = true
-                viewModel.remove(selected.map { it.id }, keepStats, onRemoved)
+                // Checked at tap time: the dialog only disappears on the next frame.
+                if (!removing) {
+                    confirming = false
+                    removing = true
+                    viewModel.remove(selected.map { it.id }, keepStats, onRemoved)
+                }
             },
             onDismiss = { confirming = false },
         )

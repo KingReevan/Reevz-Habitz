@@ -80,8 +80,11 @@ fun EditHabitScreen(
         actionLabel = "Save",
         actionEnabled = changed && edits.isComplete && !saving,
         onAction = {
-            saving = true
-            viewModel.save(stored, edits, onDone)
+            // Checked at tap time, not just via `enabled`, which only updates on the next frame.
+            if (!saving) {
+                saving = true
+                viewModel.save(stored, edits, onDone)
+            }
         },
         modifier = modifier,
     ) {
