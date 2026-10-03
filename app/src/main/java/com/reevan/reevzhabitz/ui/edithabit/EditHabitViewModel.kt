@@ -1,4 +1,4 @@
-package com.reevan.reevzhabitz.ui.removehabit
+package com.reevan.reevzhabitz.ui.edithabit
 
 import android.app.Application
 import androidx.lifecycle.ViewModel
@@ -11,34 +11,36 @@ import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDao
 import com.reevan.reevzhabitz.data.HabitDatabase
 import com.reevan.reevzhabitz.ui.common.activeHabitsInHomeOrder
-import com.reevan.reevzhabitz.util.TodayClock
+import com.reevan.reevzhabitz.ui.habitform.HabitEdits
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 
 /**
- * Every active habit — including ones that haven't started yet — in Home's current sort, and the
- * removal itself. Holds no selection: that is per-visit state, kept in the screen (see
- * AddHabitViewModel for why).
+ * Edit Habit's list and saving. Holds no editor state: the edits live in the screen, saved with
+ * it (see AddHabitViewModel for why), so leaving and reopening an editor always starts from what
+ * is stored.
  */
-class RemoveHabitViewModel(
+class EditHabitViewModel(
     private val habitDao: HabitDao,
     settingsDao: AppSettingsDao,
-    private val today: StateFlow<LocalDate>,
 ) : ViewModel() {
 
-    /** Null until the first read completes. */
+    /** Every active habit, including ones not yet started, in Home's sort. Null until loaded. */
     val habits: StateFlow<List<Habit>?> =
         activeHabitsInHomeOrder(habitDao, settingsDao)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
-    fun remove(ids: List<Long>, keepStats: Boolean, onRemoved: () -> Unit) {
-        val day = today.value
+    /** The habit as stored now, or null if it has gone (removed meanwhile). */
+    suspend fun load(habitId: Long): Habit? =
+        habitDao.getById(habitId)?.takeIf { it.deletedOn == null }
+
+    fun save(original: Habit, edits: HabitEdits, onSaved: () -> Unit) {
+        val updated = edits.applyTo(original)
         viewModelScope.launch {
-            habitDao.remove(ids, keepStats, day)
-            onRemoved()
+            habitDao.update(updated)
+            onSaved()
         }
     }
 
@@ -50,11 +52,7 @@ class RemoveHabitViewModel(
                 val application =
                     this[ViewModelProvider.AndroidViewModelFactory.APPLICATION_KEY] as Application
                 val db = HabitDatabase.getInstance(application)
-                RemoveHabitViewModel(
-                    habitDao = db.habitDao(),
-                    settingsDao = db.appSettingsDao(),
-                    today = TodayClock.instance.today,
-                )
+                EditHabitViewModel(habitDao = db.habitDao(), settingsDao = db.appSettingsDao())
             }
         }
     }

@@ -12,7 +12,7 @@ change → build/test → report). At the end of every phase, update "Current pr
 | 3 | Add Habit | Create a habit with name/description/colour/icon/start date | ✅ |
 | 4 | Home | Today's habits, tick/untick, sort toggle, midnight rollover — **first install on phone** | ✅ (installed on the phone 2026-10-03) |
 | 5 | Remove Habit | Multi-select delete with keep-stats toggle; Settings "Clear deleted stats" | ✅ |
-| 6 | Edit Habit | List + editor with discard-changes guard | ☐ |
+| 6 | Edit Habit | List + editor with discard-changes guard | ✅ |
 | 7 | Statistics | Habit list (active + deleted), month calendar, stats accordion | ☐ |
 | 8 | Polish | Empty states, theme pass, lint, on-device verification | ☐ |
 
@@ -30,7 +30,7 @@ Each is tagged with the phase that needs the answer; it doesn't block earlier ph
 | Q2 | Days before the habit existed are red. Do they count in X/Y and break streaks? Is "created" the creation day or the Start From date? | 7 | |
 | Q3 | For a deleted habit, what colour are the days after deletion? | 7 | |
 | Q4 | Newest/Oldest sort: by creation time or Start From? Is the sort choice remembered? | 4 | **Creation time; remembered across restarts.** Only the checkbox ticks a habit (not the whole card). |
-| Q5 | Do not-yet-started habits appear in Remove / Edit / Statistics? | 5 | **Remove: yes.** The list follows Home's sort; removing returns to the Menu. (Edit/Statistics: ask in their phases.) |
+| Q5 | Do not-yet-started habits appear in Remove / Edit / Statistics? | 5 | **Remove: yes.** The list follows Home's sort; removing returns to the Menu. **Edit: yes**, also in Home's sort; the editor's breadcrumb reads "Edit". (Statistics: ask in its phase.) |
 | Q6 | The spec lists 4 themes. Drop the "follow system" option? | 2 | **Yes** — only Light, Dark, VS Code Dark, Tokyo Night. |
 | Q7 | "Every single day" = no weekday-only schedules? | 1 | **Yes** — every habit is due every day once started. |
 | Q8 | Current streak while today is still unticked: show yesterday's streak until the day ends (Duolingo-style), or 0? | 7 | |

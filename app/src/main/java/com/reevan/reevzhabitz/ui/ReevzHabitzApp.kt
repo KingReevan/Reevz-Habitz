@@ -1,6 +1,7 @@
 package com.reevan.reevzhabitz.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -10,6 +11,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -22,6 +24,8 @@ import com.reevan.reevzhabitz.ui.addhabit.AddHabitScreen
 import com.reevan.reevzhabitz.ui.common.BreadcrumbHeader
 import com.reevan.reevzhabitz.ui.common.DateHeader
 import com.reevan.reevzhabitz.ui.common.SectionPlaceholder
+import com.reevan.reevzhabitz.ui.edithabit.EditHabitListScreen
+import com.reevan.reevzhabitz.ui.edithabit.EditHabitScreen
 import com.reevan.reevzhabitz.ui.home.HomeScreen
 import com.reevan.reevzhabitz.ui.home.HomeViewModel
 import com.reevan.reevzhabitz.ui.home.SortButton
@@ -60,6 +64,12 @@ fun ReevzHabitzApp() {
 
     BackHandler(enabled = backStack.size > 1, onBack = goBack)
 
+    // The header's back arrow goes through the system back dispatcher rather than straight to
+    // goBack, so it behaves exactly like the back gesture: a screen with a BackHandler of its own
+    // (the Edit Habit editor, asking before it discards changes) intercepts both the same way.
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+    val headerBack: () -> Unit = { backDispatcher?.onBackPressed() ?: goBack() }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -74,7 +84,7 @@ fun ReevzHabitzApp() {
                     }
                 }
             } else {
-                BreadcrumbHeader(crumbs = backStack.breadcrumbs(), onBack = goBack)
+                BreadcrumbHeader(crumbs = backStack.breadcrumbs(), onBack = headerBack)
             }
         },
     ) { innerPadding ->
@@ -95,9 +105,13 @@ fun ReevzHabitzApp() {
                 Destination.Menu -> MenuScreen(onOpen = navigate)
                 Destination.AddHabit -> AddHabitScreen(today = today, onCreated = goBack)
                 Destination.RemoveHabit -> RemoveHabitScreen(onRemoved = goBack)
-                Destination.EditHabitList,
-                is Destination.EditHabit,
-                -> SectionPlaceholder("Edit Habit", "Coming in Phase 6.")
+                Destination.EditHabitList -> EditHabitListScreen(
+                    onOpen = { navigate(Destination.EditHabit(it)) },
+                )
+                // Keyed by habit, so one habit's unsaved edits can never carry into another's.
+                is Destination.EditHabit -> key(current.habitId) {
+                    EditHabitScreen(habitId = current.habitId, onDone = goBack)
+                }
                 Destination.StatisticsList,
                 is Destination.HabitStatistics,
                 -> SectionPlaceholder("Statistics", "Coming in Phase 7.")

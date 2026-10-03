@@ -108,7 +108,7 @@ is attached.
 
 ## Current project state
 
-Phases 1–5 of `docs/PLAN.md` are done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
+Phases 1–6 of `docs/PLAN.md` are done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
 Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00050146M001006`; `minSdk 26` / `targetSdk 37`.
 
 - `data/` — Room schema v1: `habits` (soft delete via `deletedOn`), `completions` (one row per
@@ -161,7 +161,15 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
 - Settings → "Clear deleted stats" (`DeletedStatsViewModel`, `HabitDao.purgeDeleted`): hard-deletes
   every soft-deleted habit and its completions after a counted warning. This and Remove without
   stats are the only user-data deletes in the app.
-- Edit/Statistics are still `SectionPlaceholder`s.
+- `ui/edithabit/` — Edit Habit: list (active incl. not started, Home's sort, via the shared
+  `ui/common/activeHabitsInHomeOrder`) → editor for name/description/colour/icon only. Save is
+  enabled only for a real, complete change (`HabitEdits.changes`, normalised like Add). Back with
+  changes asks "Discard changes?". The editor is `key`ed by habit id in the shell.
+- **The header back arrow goes through the system `OnBackPressedDispatcher`**, not straight to
+  `goBack`, so any screen's `BackHandler` intercepts the arrow and the gesture alike.
+- `ui/habitform/HabitFormLayout` — `HabitFormScaffold` (scrolling form + fixed bottom-right action)
+  and `HabitDetailsFields` (name, description, colour, icon), shared by Add and Edit.
+- Statistics is still a `SectionPlaceholder`.
 - Testing text input on the emulator: `adb shell input text` with a whole string types faster than
   the emulator keyboard keeps up with in a word-capitalising field and drops letters. Send one
   character per `input text` call to get human-pace typing.
