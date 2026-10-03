@@ -1,7 +1,6 @@
 package com.reevan.reevzhabitz.ui.theme
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -24,28 +23,16 @@ private val LightColorScheme = lightColorScheme(
 )
 
 /**
- * Resolves [ThemeMode] against the system setting.
- *
- * Exposed so callers can honour an explicit Light/Dark choice while System still follows the OS.
- */
-@Composable
-fun ThemeMode.isDark(): Boolean = when (this) {
-    ThemeMode.SYSTEM -> isSystemInDarkTheme()
-    ThemeMode.LIGHT -> false
-    ThemeMode.DARK -> true
-}
-
-/**
- * Placeholder palette from the project template. Dynamic colour (Android 12+) is on for now;
- * turn it off once the app has its own named palette, since the two cannot both be in charge.
+ * Placeholder palette from the project template. Phase 2 replaces it with the four real themes
+ * (VS Code Dark and Tokyo Night currently render as plain Dark) and turns dynamic colour off.
  */
 @Composable
 fun ReevzHabitzTheme(
-    themeMode: ThemeMode = ThemeMode.SYSTEM,
+    themeMode: ThemeMode = ThemeMode.DARK,
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val darkTheme = themeMode.isDark()
+    val darkTheme = themeMode != ThemeMode.LIGHT
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current

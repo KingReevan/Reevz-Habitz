@@ -2,8 +2,12 @@
 
 ## What this project is
 
-Reevz Habitz is a **personal Android habit tracker** for my own phone. Details of the features are
-still to come — do not invent them.
+Reevz Habitz is a **personal Android habit tracker** for my own phone.
+
+**The product spec is [`docs/SPEC.md`](docs/SPEC.md) — read it before working on any feature.** It
+is the source of truth for screens and behaviour. Do not invent features beyond it; where it is
+silent or ambiguous, ask. The phased build order, open decisions and data model are in
+[`docs/PLAN.md`](docs/PLAN.md); keep its status table and decision answers up to date.
 
 It is a personal app — not a multi-user SaaS product. Treat that as a design constraint, not a
 temporary phase. Its sibling project, Reevz Mealz (`..\ReevzMealz`), uses the same stack and
@@ -81,8 +85,8 @@ is attached.
 - Support **light and dark themes** through `ReevzHabitzTheme`; use colour *roles*, never
   hardcoded colours.
 - Use accessible touch targets (48dp minimum) and readable typography.
-- Section switching is plain state in `ReevzHabitzApp`, not a navigation library, until sections
-  actually grow sub-screens.
+- Navigation is the hand-rolled back stack in `ui/navigation/`, not a navigation library
+  (decision T2 in `docs/PLAN.md`).
 
 ## Data guidelines
 
@@ -104,17 +108,30 @@ is attached.
 
 ## Current project state
 
-Scaffold only. Single Gradle module `:app`, package `com.reevan.reevzhabitz`. Target device is a
-**Nothing Phone (2a)**; `minSdk 24` / `targetSdk 37` covers it.
+Phase 1 of `docs/PLAN.md` is done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
+Target device is a **Nothing Phone (2a) on Android 16**; `minSdk 26` / `targetSdk 37`.
 
-- `data/HabitDatabase` — Room database, schema v1, containing only `app_settings` (theme mode).
-- `ui/settings/PreferencesViewModel` — exposes `AppSettings`; MainActivity reads the theme from it.
-- `ui/ReevzHabitzApp` — Scaffold shell with a single placeholder section.
-- `ui/theme` — still the template palette with Material You dynamic colour on. The app has no
-  visual identity yet.
+- `data/` — Room schema v1: `habits` (soft delete via `deletedOn`), `completions` (one row per
+  habit per day done, cascades on hard delete), `app_settings` (theme). Dates are `LocalDate`
+  stored as epoch days (`Converters`). DAOs hold only basic reads/writes; screen-specific queries
+  are added by the phase that needs them.
+- `util/TodayClock` — the single source of "today". Ticks at local midnight; MainActivity restarts
+  it on every return to the foreground. Never call `LocalDate.now()` elsewhere — read
+  `TodayClock.instance.today`.
+- `ui/navigation/` — hand-rolled back stack (`Destination` sealed class, pure `push`/`pop`, saved
+  as route strings). `Destination`'s companion lists must stay `by lazy` (see the comment there).
+- `ui/common/AppHeader` — `DateHeader` (Home) and `BreadcrumbHeader` (every other screen).
+- `ui/menu/MenuScreen` — the five Menu buttons. Every other screen is a `SectionPlaceholder`.
+- `ui/theme` — still the template palette. VS Code Dark and Tokyo Night render as plain Dark until
+  Phase 2.
 
-The schema has never been installed on the phone, so until the first real install v1 can still be
-edited freely; after that, every change needs a migration.
+The schema has never been installed on the phone, so until the first real install (end of Phase 4)
+v1 can still be edited freely; after that, every change needs a migration.
+
+A local emulator, `habitz_test` (Android 14, Pixel 7 profile), exists for verification while the
+phone is not connected. Start it with
+`emulator -avd habitz_test -no-window -gpu swiftshader_indirect`; it is slow (software GPU) and
+its System UI may show a "not responding" dialog on first boot.
 
 ## Toolchain notes (non-obvious — read before touching Gradle)
 
@@ -123,6 +140,7 @@ edited freely; after that, every change needs a migration.
 - **There is no `org.jetbrains.kotlin.android` plugin.** AGP 9 compiles Kotlin itself. Only
   `com.android.application`, `org.jetbrains.kotlin.plugin.compose` and `com.google.devtools.ksp`
   are applied. Don't "fix" this by adding the Kotlin Android plugin.
+- `minSdk` is 26 so `java.time` is available without desugaring (decision T1).
 - `compileSdk` uses the AGP 9 block form: `compileSdk { version = release(37) }`.
 - Release build type uses `optimization { enable = false }` — the AGP 9 replacement for
   `isMinifyEnabled` / `proguardFiles`. R8 is currently off.
