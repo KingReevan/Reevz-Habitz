@@ -132,6 +132,67 @@ class HabitDatabaseTest {
         assertEquals(ThemeMode.TOKYO_NIGHT, settings.themeMode)
     }
 
+    @Test
+    fun remove_keepingStats_hidesTheHabitButKeepsItsHistory() = runBlocking {
+        val kept = db.habitDao().insert(habit("Kept"))
+        val other = db.habitDao().insert(habit("Other"))
+        db.completionDao().markDone(Completion(kept, day))
+
+        db.habitDao().remove(listOf(kept), keepStats = true, today = day.plusDays(2))
+
+        assertEquals(day.plusDays(2), db.habitDao().getById(kept)!!.deletedOn)
+        assertEquals(listOf(other), db.habitDao().observeActive().first().map { it.id })
+        assertEquals(listOf(other), db.habitDao().observeDueOn(day).first().map { it.habit.id })
+        assertEquals(1, completionCount())
+        assertEquals(1, db.habitDao().observeDeletedCount().first())
+    }
+
+    @Test
+    fun remove_withoutStats_deletesTheHabitAndItsHistory() = runBlocking {
+        val gone = db.habitDao().insert(habit("Gone"))
+        val other = db.habitDao().insert(habit("Other"))
+        db.completionDao().markDone(Completion(gone, day))
+        db.completionDao().markDone(Completion(gone, day.plusDays(1)))
+        db.completionDao().markDone(Completion(other, day))
+
+        db.habitDao().remove(listOf(gone), keepStats = false, today = day)
+
+        assertNull(db.habitDao().getById(gone))
+        assertEquals(1, completionCount())
+        assertEquals(0, db.habitDao().observeDeletedCount().first())
+    }
+
+    @Test
+    fun removingSeveralAtOnce_keepsTheFirstDeletionDateIfAlreadyRemoved() = runBlocking {
+        val a = db.habitDao().insert(habit("A"))
+        val b = db.habitDao().insert(habit("B"))
+        db.habitDao().remove(listOf(a), keepStats = true, today = day)
+        db.habitDao().remove(listOf(a, b), keepStats = true, today = day.plusDays(1))
+
+        assertEquals(day, db.habitDao().getById(a)!!.deletedOn)
+        assertEquals(day.plusDays(1), db.habitDao().getById(b)!!.deletedOn)
+    }
+
+    @Test
+    fun purgeDeleted_clearsOnlyRemovedHabitsAndTheirHistory() = runBlocking {
+        val active = db.habitDao().insert(habit("Active"))
+        val removed1 = db.habitDao().insert(habit("Removed 1"))
+        val removed2 = db.habitDao().insert(habit("Removed 2"))
+        listOf(active, removed1, removed2).forEach {
+            db.completionDao().markDone(Completion(it, day))
+        }
+        db.habitDao().remove(listOf(removed1, removed2), keepStats = true, today = day)
+
+        assertEquals(2, db.habitDao().purgeDeleted())
+
+        assertEquals(listOf(active), db.habitDao().observeActive().first().map { it.id })
+        assertNull(db.habitDao().getById(removed1))
+        assertNull(db.habitDao().getById(removed2))
+        assertEquals(1, completionCount())
+        assertEquals(0, db.habitDao().observeDeletedCount().first())
+        assertEquals(0, db.habitDao().purgeDeleted())
+    }
+
     private fun completionCount(): Int =
         db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM completions").use {
             it.moveToFirst()

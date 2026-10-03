@@ -3,6 +3,7 @@ package com.reevan.reevzhabitz.data
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
@@ -41,4 +42,32 @@ interface HabitDao {
     /** Habits not removed, including ones whose start date is still in the future. */
     @Query("SELECT * FROM habits WHERE deletedOn IS NULL")
     fun observeActive(): Flow<List<Habit>>
+
+    /** How many removed habits still have their stats kept. */
+    @Query("SELECT COUNT(*) FROM habits WHERE deletedOn IS NOT NULL")
+    fun observeDeletedCount(): Flow<Int>
+
+    /** Removes habits but keeps them, and their completions, for Statistics. */
+    @Query("UPDATE habits SET deletedOn = :on WHERE id IN (:ids) AND deletedOn IS NULL")
+    suspend fun softDelete(ids: List<Long>, on: LocalDate)
+
+    /** Deletes habits for good. Their completions go with them (ON DELETE CASCADE). */
+    @Query("DELETE FROM habits WHERE id IN (:ids)")
+    suspend fun hardDelete(ids: List<Long>)
+
+    /**
+     * Remove Habit's single entry point. With [keepStats] the habits are only marked removed as of
+     * [today]; without it they and their whole history are deleted.
+     */
+    @Transaction
+    suspend fun remove(ids: List<Long>, keepStats: Boolean, today: LocalDate) {
+        if (keepStats) softDelete(ids, today) else hardDelete(ids)
+    }
+
+    /**
+     * Settings' "Clear deleted stats": permanently deletes every removed habit and, by cascade,
+     * all of its completions. Active habits are untouched. Returns how many habits were deleted.
+     */
+    @Query("DELETE FROM habits WHERE deletedOn IS NOT NULL")
+    suspend fun purgeDeleted(): Int
 }

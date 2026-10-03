@@ -3,6 +3,7 @@ package com.reevan.reevzhabitz
 import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitOnDay
 import com.reevan.reevzhabitz.data.HomeSort
+import com.reevan.reevzhabitz.ui.common.sortedFor
 import com.reevan.reevzhabitz.ui.home.orderForHome
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -81,6 +82,18 @@ class HomeOrderingTest {
         assertEquals(HomeSort.NEWEST_FIRST, HomeSort.ALPHABETICAL.next())
         assertEquals(HomeSort.OLDEST_FIRST, HomeSort.NEWEST_FIRST.next())
         assertEquals(HomeSort.ALPHABETICAL, HomeSort.OLDEST_FIRST.next())
+    }
+
+    @Test
+    fun plainHabitLists_followTheSameSort() {
+        // Remove Habit sorts plain habits with the same rules Home uses, minus the done grouping.
+        val habits = all.map { it.habit }
+        assertEquals(
+            listOf("drink water", "Gym", "Read"),
+            habits.sortedFor(HomeSort.ALPHABETICAL).map { it.name },
+        )
+        assertEquals(listOf("Gym", "drink water", "Read"), habits.sortedFor(HomeSort.NEWEST_FIRST).map { it.name })
+        assertEquals(listOf("Read", "drink water", "Gym"), habits.sortedFor(HomeSort.OLDEST_FIRST).map { it.name })
     }
 
     @Test

@@ -108,7 +108,7 @@ is attached.
 
 ## Current project state
 
-Phases 1–4 of `docs/PLAN.md` are done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
+Phases 1–5 of `docs/PLAN.md` are done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
 Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00050146M001006`; `minSdk 26` / `targetSdk 37`.
 
 - `data/` — Room schema v1: `habits` (soft delete via `deletedOn`), `completions` (one row per
@@ -154,7 +154,14 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   Start From defaults to tomorrow.
 - "Today" also restarts on clock / time zone / date change broadcasts (`util/clockChanges`), because
   the midnight delay counts elapsed time and can't see the wall clock jump.
-- Remove/Edit/Statistics are still `SectionPlaceholder`s.
+- `ui/removehabit/` — Remove Habit: every active habit (incl. not yet started) in Home's sort
+  (`ui/common/HabitOrder` — shared comparator), multi-select by checkbox, confirm dialog with
+  "Keep stats" (on by default). `HabitDao.remove` soft-deletes (`deletedOn = today`) or hard-deletes
+  (completions cascade). Returns to Menu.
+- Settings → "Clear deleted stats" (`DeletedStatsViewModel`, `HabitDao.purgeDeleted`): hard-deletes
+  every soft-deleted habit and its completions after a counted warning. This and Remove without
+  stats are the only user-data deletes in the app.
+- Edit/Statistics are still `SectionPlaceholder`s.
 - Testing text input on the emulator: `adb shell input text` with a whole string types faster than
   the emulator keyboard keeps up with in a word-capitalising field and drops letters. Send one
   character per `input text` call to get human-pace typing.
@@ -168,7 +175,10 @@ Generated assets — edit the script, not the output:
 **Schema v1 has been on the phone since 2026-10-03 and is frozen.** Every schema change from now
 on is a version bump plus a migration (`@AutoMigration` where additive). Never edit v1 in place.
 Before any `connectedAndroidTest` on the phone, back up its database (see Data guidelines) — the
-test run uninstalls the app and deletes it. Prefer the emulator for instrumented tests.
+test run uninstalls the app and deletes it. Run instrumented tests on the emulator only: **when
+the phone is plugged in, set `ANDROID_SERIAL=emulator-5554` first**, or Gradle runs them on every
+connected device, the phone included. Update the phone with `adb -s 00050146M001006 install -r`
+(keeps data).
 
 Emulator testing tips: run adb from Git Bash with `MSYS_NO_PATHCONV=1`, or device paths like
 `/data/local/tmp` get rewritten to Windows paths. `adb root` + `adb shell date MMDDhhmmYY.ss` sets

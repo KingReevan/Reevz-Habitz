@@ -32,6 +32,7 @@ import com.reevan.reevzhabitz.ui.navigation.InitialBackStack
 import com.reevan.reevzhabitz.ui.navigation.breadcrumbs
 import com.reevan.reevzhabitz.ui.navigation.pop
 import com.reevan.reevzhabitz.ui.navigation.push
+import com.reevan.reevzhabitz.ui.removehabit.RemoveHabitScreen
 import com.reevan.reevzhabitz.ui.settings.SettingsScreen
 import com.reevan.reevzhabitz.util.TodayClock
 import com.reevan.reevzhabitz.util.formatHeaderDate
@@ -93,7 +94,7 @@ fun ReevzHabitzApp() {
                 )
                 Destination.Menu -> MenuScreen(onOpen = navigate)
                 Destination.AddHabit -> AddHabitScreen(today = today, onCreated = goBack)
-                Destination.RemoveHabit -> SectionPlaceholder("Remove Habit", "Coming in Phase 5.")
+                Destination.RemoveHabit -> RemoveHabitScreen(onRemoved = goBack)
                 Destination.EditHabitList,
                 is Destination.EditHabit,
                 -> SectionPlaceholder("Edit Habit", "Coming in Phase 6.")

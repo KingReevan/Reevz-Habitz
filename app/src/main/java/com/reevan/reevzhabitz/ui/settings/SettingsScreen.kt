@@ -1,6 +1,14 @@
 package com.reevan.reevzhabitz.ui.settings
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,15 +44,15 @@ import com.reevan.reevzhabitz.ui.theme.ReevzHabitzTheme
 import com.reevan.reevzhabitz.ui.theme.colorScheme
 import com.reevan.reevzhabitz.ui.theme.habitzColors
 
-/**
- * Settings. The theme picker for now; "Clear deleted stats" joins it in Phase 5.
- */
+/** Settings: the theme picker and "Clear deleted stats". */
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     preferences: PreferencesViewModel = viewModel(factory = PreferencesViewModel.Factory),
+    deletedStats: DeletedStatsViewModel = viewModel(factory = DeletedStatsViewModel.Factory),
 ) {
     val settings by preferences.settings.collectAsStateWithLifecycle()
+    val deletedCount by deletedStats.deletedCount.collectAsStateWithLifecycle()
     // MainActivity doesn't draw until settings have loaded, so this is never null in practice.
     val selected = settings?.themeMode ?: return
 
@@ -55,6 +63,79 @@ fun SettingsScreen(
             .padding(vertical = 8.dp),
     ) {
         ThemePicker(selected = selected, onSelect = preferences::setThemeMode)
+        HorizontalDivider(
+            color = MaterialTheme.colorScheme.outlineVariant,
+            modifier = Modifier.padding(vertical = 8.dp),
+        )
+        ClearDeletedStats(count = deletedCount, onClear = deletedStats::clearDeletedStats)
+    }
+}
+
+/**
+ * Permanently deletes every removed habit whose stats were kept. Says how many first, and asks.
+ * Disabled when there is nothing to clear.
+ */
+@Composable
+private fun ClearDeletedStats(count: Int?, onClear: () -> Unit) {
+    var confirming by rememberSaveable { mutableStateOf(false) }
+    val enabled = (count ?: 0) > 0
+
+    SectionTitle("Data")
+    Column(
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .clickable(enabled = enabled, role = Role.Button) { confirming = true }
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        Text(
+            text = "Clear deleted stats",
+            style = MaterialTheme.typography.bodyLarge,
+            color = if (enabled) {
+                MaterialTheme.colorScheme.error
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            },
+        )
+        Text(
+            text = when (count) {
+                null -> ""
+                0 -> "No deleted habits have stats kept."
+                1 -> "1 deleted habit still has its stats kept."
+                else -> "$count deleted habits still have their stats kept."
+            },
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    if (confirming && enabled) {
+        val habits = if (count == 1) "1 deleted habit" else "$count deleted habits"
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text("Clear deleted stats?") },
+            text = {
+                Text(
+                    "All statistics of $habits will be cleared completely. They will no longer " +
+                        "appear in Statistics. This can't be undone.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onClear()
+                        confirming = false
+                    },
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) { Text("Clear") }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirming = false }) { Text("Cancel") }
+            },
+        )
     }
 }
 
