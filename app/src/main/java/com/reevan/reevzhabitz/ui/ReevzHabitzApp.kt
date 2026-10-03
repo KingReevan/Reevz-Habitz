@@ -23,7 +23,6 @@ import com.reevan.reevzhabitz.R
 import com.reevan.reevzhabitz.ui.addhabit.AddHabitScreen
 import com.reevan.reevzhabitz.ui.common.BreadcrumbHeader
 import com.reevan.reevzhabitz.ui.common.DateHeader
-import com.reevan.reevzhabitz.ui.common.SectionPlaceholder
 import com.reevan.reevzhabitz.ui.edithabit.EditHabitListScreen
 import com.reevan.reevzhabitz.ui.edithabit.EditHabitScreen
 import com.reevan.reevzhabitz.ui.home.HomeScreen
@@ -38,6 +37,8 @@ import com.reevan.reevzhabitz.ui.navigation.pop
 import com.reevan.reevzhabitz.ui.navigation.push
 import com.reevan.reevzhabitz.ui.removehabit.RemoveHabitScreen
 import com.reevan.reevzhabitz.ui.settings.SettingsScreen
+import com.reevan.reevzhabitz.ui.statistics.HabitStatisticsScreen
+import com.reevan.reevzhabitz.ui.statistics.StatisticsListScreen
 import com.reevan.reevzhabitz.util.TodayClock
 import com.reevan.reevzhabitz.util.formatHeaderDate
 
@@ -112,9 +113,12 @@ fun ReevzHabitzApp() {
                 is Destination.EditHabit -> key(current.habitId) {
                     EditHabitScreen(habitId = current.habitId, onDone = goBack)
                 }
-                Destination.StatisticsList,
-                is Destination.HabitStatistics,
-                -> SectionPlaceholder("Statistics", "Coming in Phase 7.")
+                Destination.StatisticsList -> StatisticsListScreen(
+                    onOpen = { navigate(Destination.HabitStatistics(it)) },
+                )
+                is Destination.HabitStatistics -> key(current.habitId) {
+                    HabitStatisticsScreen(habitId = current.habitId, onGone = goBack)
+                }
                 Destination.Settings -> SettingsScreen()
             }
         }

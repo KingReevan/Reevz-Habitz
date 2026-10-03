@@ -193,6 +193,23 @@ class HabitDatabaseTest {
         assertEquals(0, db.habitDao().purgeDeleted())
     }
 
+    @Test
+    fun statisticsQueries_historyAndDeletedList() = runBlocking {
+        val kept = db.habitDao().insert(habit("Kept"))
+        val active = db.habitDao().insert(habit("Active"))
+        listOf(day, day.plusDays(2)).forEach { db.completionDao().markDone(Completion(kept, it)) }
+        db.completionDao().markDone(Completion(active, day))
+        db.habitDao().remove(listOf(kept), keepStats = true, today = day.plusDays(3))
+
+        assertEquals(
+            setOf(day, day.plusDays(2)),
+            db.completionDao().observeDatesFor(kept).first().toSet(),
+        )
+        assertEquals(listOf(kept), db.habitDao().observeDeleted().first().map { it.id })
+        assertEquals(day.plusDays(3), db.habitDao().observeById(kept).first()!!.deletedOn)
+        assertNull(db.habitDao().observeById(9999).first())
+    }
+
     private fun completionCount(): Int =
         db.openHelper.readableDatabase.query("SELECT COUNT(*) FROM completions").use {
             it.moveToFirst()

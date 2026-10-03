@@ -43,6 +43,13 @@ interface HabitDao {
     @Query("SELECT * FROM habits WHERE deletedOn IS NULL")
     fun observeActive(): Flow<List<Habit>>
 
+    @Query("SELECT * FROM habits WHERE id = :id")
+    fun observeById(id: Long): Flow<Habit?>
+
+    /** Removed habits whose stats were kept — Statistics' "Deleted" section. */
+    @Query("SELECT * FROM habits WHERE deletedOn IS NOT NULL")
+    fun observeDeleted(): Flow<List<Habit>>
+
     /** How many removed habits still have their stats kept. */
     @Query("SELECT COUNT(*) FROM habits WHERE deletedOn IS NOT NULL")
     fun observeDeletedCount(): Flow<Int>

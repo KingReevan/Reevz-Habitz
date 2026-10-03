@@ -108,7 +108,7 @@ is attached.
 
 ## Current project state
 
-Phases 1–6 of `docs/PLAN.md` are done. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
+Phases 1–7 of `docs/PLAN.md` are done; Phase 8 (polish) remains. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
 Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00050146M001006`; `minSdk 26` / `targetSdk 37`.
 
 - `data/` — Room schema v1: `habits` (soft delete via `deletedOn`), `completions` (one row per
@@ -169,7 +169,13 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   `goBack`, so any screen's `BackHandler` intercepts the arrow and the gesture alike.
 - `ui/habitform/HabitFormLayout` — `HabitFormScaffold` (scrolling form + fixed bottom-right action)
   and `HabitDetailsFields` (name, description, colour, icon), shared by Add and Edit.
-- Statistics is still a `SectionPlaceholder`.
+- `ui/statistics/` — Statistics list (started active habits, then a "Deleted" section) → one
+  habit's screen: a collapsible strip (name; X/Y, current and longest streak) over a month calendar.
+  **All rules live in the pure `HabitHistory`** (day colours, numbers, paging range) and are pinned
+  by `HabitHistoryTest` — change rules there, not in the UI. In short: due every day from Start
+  From; earlier days red but uncounted; today/deletion day count only once ticked (streak survives
+  an unticked today); after deletion grey. Opens on the current month (deletion month if deleted);
+  pages from the creation month. Day numbers pick black/white by best contrast.
 - Testing text input on the emulator: `adb shell input text` with a whole string types faster than
   the emulator keyboard keeps up with in a word-capitalising field and drops letters. Send one
   character per `input text` call to get human-pace typing.

@@ -16,9 +16,10 @@ sealed class Destination(val label: String, val route: String) {
     data object StatisticsList : Destination("Statistics", "stats")
     data object Settings : Destination("Settings", "settings")
 
-    // Labels for the two per-habit screens are provisional; Phases 6 and 7 decide what they show.
+    // The per-habit screens have short generic crumbs, by the owner's choice; the screens
+    // themselves show which habit they are about.
     data class EditHabit(val habitId: Long) : Destination("Edit", "edit/$habitId")
-    data class HabitStatistics(val habitId: Long) : Destination("Habit", "stats/$habitId")
+    data class HabitStatistics(val habitId: Long) : Destination("Stats", "stats/$habitId")
 
     // Both lists are lazy on purpose. The companion is initialised as part of Destination itself,
     // before its nested objects exist, so an eager listOf(Home, ...) here captures nulls.
