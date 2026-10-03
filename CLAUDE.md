@@ -103,12 +103,15 @@ is attached.
 - **`connectedAndroidTest` uninstalls the app when it finishes, which deletes the database.** Back
   up the phone's database first
   (`adb exec-out run-as com.reevan.reevzhabitz cat databases/reevz-habitz.db`) and restore it after.
+- **No backups, by the owner's choice.** `allowBackup="false"`, and `data_extraction_rules.xml` /
+  `backup_rules.xml` exclude every domain from cloud backup *and* device-to-device transfer, so
+  habit data never leaves the phone. Don't re-enable either without asking.
 - Do not delete or reset user data as part of a normal feature implementation. Treat logged habit
   history as valuable and non-recoverable.
 
 ## Current project state
 
-Phases 1–7 of `docs/PLAN.md` are done; Phase 8 (polish) remains. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
+All eight phases of `docs/PLAN.md` are done: every screen in `docs/SPEC.md` is built and on the phone. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
 Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00050146M001006`; `minSdk 26` / `targetSdk 37`.
 
 - `data/` — Room schema v1: `habits` (soft delete via `deletedOn`), `completions` (one row per
@@ -132,6 +135,8 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   colours and drawables. Keys are never renamed or removed. Each habit colour has a light-theme
   and a dark-theme shade; read it with `habitColor.current`. `ThemeColorsTest` enforces contrast for
   every theme and habit colour — run it after touching any colour.
+- Accessibility: Home and Remove checkboxes carry the habit name as their content description;
+  headers and buttons use minimum (not fixed) heights so large system fonts don't clip.
 - `MainActivity` holds the first frame until settings load (no flash of the wrong theme) and sets
   system bar icon colours from the app theme, not the phone's.
 - `ui/addhabit/` — Add Habit. Form state lives in the screen (`rememberSaveable` /

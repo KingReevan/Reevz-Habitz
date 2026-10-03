@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -118,7 +118,9 @@ private fun HeaderBar(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(HeaderHeight)
+                    // A minimum, not a fixed height, so a large system font grows the bar
+                    // instead of clipping the date or breadcrumb.
+                    .heightIn(min = HeaderHeight)
                     .padding(horizontal = 4.dp),
                 content = content,
             )

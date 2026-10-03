@@ -14,7 +14,7 @@ change → build/test → report). At the end of every phase, update "Current pr
 | 5 | Remove Habit | Multi-select delete with keep-stats toggle; Settings "Clear deleted stats" | ✅ |
 | 6 | Edit Habit | List + editor with discard-changes guard | ✅ |
 | 7 | Statistics | Habit list (active + deleted), month calendar, stats accordion | ✅ |
-| 8 | Polish | Empty states, theme pass, lint, on-device verification | ☐ |
+| 8 | Polish | Empty states, theme pass, lint, on-device verification | ✅ |
 
 ---
 

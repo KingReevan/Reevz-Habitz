@@ -23,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.reevan.reevzhabitz.R
@@ -110,6 +112,8 @@ private fun HabitRow(item: HabitOnDay, onCheck: () -> Unit) {
                     checkmarkColor = Color.White,
                     uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
                 ),
+                // Names the checkbox for TalkBack: "Gym, checkbox, not checked".
+                modifier = Modifier.semantics { contentDescription = item.habit.name },
             )
         },
     )

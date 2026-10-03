@@ -2,8 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!--
+        No backups, by the owner's choice: habit data never leaves the phone. allowBackup="false"
+        stops Google Drive backup; on Android 12+ it does not stop device-to-device transfer when
+        setting up a new phone, so data_extraction_rules excludes everything from both.
+    -->
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
