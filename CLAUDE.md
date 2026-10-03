@@ -66,7 +66,14 @@ Windows / PowerShell (primary shell here):
 ```
 
 Instrumented tests (`connectedDebugAndroidTest`) need a running emulator or device; don't assume one
-is attached.
+is attached. They are:
+- `HabitDatabaseTest` — DAO queries against an in-memory database.
+- `AppFlowsTest` — end-to-end flows through the real Activity and **the real database, which it
+  wipes before every test**: Home ticking/sorting, navigation, Add (validation, capitalisation,
+  double tap), Remove (keep / delete stats), Edit (save, discard, double tap), Statistics (sections,
+  numbers), Settings (theme, clear deleted stats), and state surviving rotation. Emulator only.
+
+Add a flow test here when adding or changing a user-facing flow.
 
 ## Git
 
