@@ -1,6 +1,5 @@
 package com.reevan.reevzhabitz.ui.edithabit
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.material3.AlertDialog
@@ -19,18 +18,23 @@ import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.ui.habitform.HabitDetailsFields
 import com.reevan.reevzhabitz.ui.habitform.HabitEdits
 import com.reevan.reevzhabitz.ui.habitform.HabitFormScaffold
+import com.reevan.reevzhabitz.ui.navigation.Destination
+import com.reevan.reevzhabitz.ui.navigation.InterceptLeaving
+import com.reevan.reevzhabitz.ui.navigation.LeaveGuard
 
 /**
  * The editor for one habit: name, description, colour and icon, then Save — which stores the
  * changes and returns to the list via [onDone].
  *
- * Back (the header arrow or the system gesture — the header routes through the system back
- * dispatcher, so both arrive here) leaves at once when nothing has changed, and asks before
- * discarding when something has.
+ * Leaving by any route — system back, the header arrow, or a breadcrumb — goes at once when
+ * nothing has changed. With unsaved changes it is held up by [leaveGuard] to ask "Discard
+ * changes?", and Discard then goes wherever the user was heading, through [onLeave].
  */
 @Composable
 fun EditHabitScreen(
     habitId: Long,
+    leaveGuard: LeaveGuard,
+    onLeave: (target: List<Destination>) -> Unit,
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: EditHabitViewModel = viewModel(factory = EditHabitViewModel.Factory),
@@ -45,7 +49,9 @@ fun EditHabitScreen(
     var iconKey by rememberSaveable { mutableStateOf("") }
     var filled by rememberSaveable { mutableStateOf(false) }
 
-    var confirmingDiscard by rememberSaveable { mutableStateOf(false) }
+    // Where the user tried to go with unsaved changes, while "Discard changes?" is up. Saved as
+    // routes, so after a rotation Discard still lands on the screen they chose.
+    var pendingLeave by rememberSaveable { mutableStateOf<List<String>?>(null) }
     var saving by remember { mutableStateOf(false) }
 
     LaunchedEffect(habitId) {
@@ -74,7 +80,9 @@ fun EditHabitScreen(
     )
     val changed = edits.changes(stored)
 
-    BackHandler(enabled = changed && !saving) { confirmingDiscard = true }
+    leaveGuard.InterceptLeaving(enabled = changed && !saving) { target ->
+        pendingLeave = target.map { it.route }
+    }
 
     HabitFormScaffold(
         actionLabel = "Save",
@@ -99,21 +107,22 @@ fun EditHabitScreen(
         )
     }
 
-    if (confirmingDiscard) {
+    val leaving = pendingLeave
+    if (leaving != null) {
         AlertDialog(
-            onDismissRequest = { confirmingDiscard = false },
+            onDismissRequest = { pendingLeave = null },
             title = { Text("Discard changes?") },
             text = { Text("Your changes to “${stored.name}” will be lost.") },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        confirmingDiscard = false
-                        onDone()
+                        pendingLeave = null
+                        onLeave(leaving.map(Destination::fromRoute))
                     },
                 ) { Text("Discard") }
             },
             dismissButton = {
-                TextButton(onClick = { confirmingDiscard = false }) { Text("Keep editing") }
+                TextButton(onClick = { pendingLeave = null }) { Text("Keep editing") }
             },
         )
     }

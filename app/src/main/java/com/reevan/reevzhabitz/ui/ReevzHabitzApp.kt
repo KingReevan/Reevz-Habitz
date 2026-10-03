@@ -1,7 +1,6 @@
 package com.reevan.reevzhabitz.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -32,8 +32,11 @@ import com.reevan.reevzhabitz.ui.menu.MenuScreen
 import com.reevan.reevzhabitz.ui.navigation.BackStackSaver
 import com.reevan.reevzhabitz.ui.navigation.Destination
 import com.reevan.reevzhabitz.ui.navigation.InitialBackStack
+import com.reevan.reevzhabitz.ui.navigation.LeaveGuard
 import com.reevan.reevzhabitz.ui.navigation.breadcrumbs
 import com.reevan.reevzhabitz.ui.navigation.pop
+import com.reevan.reevzhabitz.ui.navigation.popIfCurrent
+import com.reevan.reevzhabitz.ui.navigation.popTo
 import com.reevan.reevzhabitz.ui.navigation.push
 import com.reevan.reevzhabitz.ui.removehabit.RemoveHabitScreen
 import com.reevan.reevzhabitz.ui.settings.SettingsScreen
@@ -46,8 +49,8 @@ import com.reevan.reevzhabitz.util.formatHeaderDate
  * App shell: owns the back stack, picks the header for the current screen, and renders that
  * screen below it.
  *
- * Home gets the date header; every other screen gets a back arrow and breadcrumb. System back
- * pops one screen; from Home it leaves the app as usual.
+ * Home gets the date header; every other screen gets a back arrow and a breadcrumb whose earlier
+ * crumbs jump straight back. System back pops one screen; from Home it leaves the app as usual.
  */
 @Composable
 fun ReevzHabitzApp() {
@@ -61,15 +64,23 @@ fun ReevzHabitzApp() {
     val homeState by home.state.collectAsStateWithLifecycle()
 
     val navigate: (Destination) -> Unit = { backStack = backStack.push(it) }
-    val goBack: () -> Unit = { backStack = backStack.pop() }
 
-    BackHandler(enabled = backStack.size > 1, onBack = goBack)
+    // Leaving the screen on top for [target] — system back, the header arrow or a breadcrumb.
+    // The screen may hold it up (the Edit Habit editor, to ask before discarding changes) and
+    // later approve it through [commitLeave].
+    val leaveGuard = remember { LeaveGuard() }
+    val leaveTo: (List<Destination>) -> Unit = { target ->
+        if (!leaveGuard.intercepts(target)) backStack = target
+    }
+    val commitLeave: (List<Destination>) -> Unit = { backStack = it }
 
-    // The header's back arrow goes through the system back dispatcher rather than straight to
-    // goBack, so it behaves exactly like the back gesture: a screen with a BackHandler of its own
-    // (the Edit Habit editor, asking before it discards changes) intercepts both the same way.
-    val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-    val headerBack: () -> Unit = { backDispatcher?.onBackPressed() ?: goBack() }
+    // A screen finishing its own job (Create, Save, Remove) goes back to where it came from —
+    // but only if it is still on top, so a breadcrumb tapped while it saved is never overruled.
+    val finish: (Destination) -> () -> Unit = { screen ->
+        { backStack = backStack.popIfCurrent(screen) }
+    }
+
+    BackHandler(enabled = backStack.size > 1) { leaveTo(backStack.pop()) }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -85,7 +96,11 @@ fun ReevzHabitzApp() {
                     }
                 }
             } else {
-                BreadcrumbHeader(crumbs = backStack.breadcrumbs(), onBack = headerBack)
+                BreadcrumbHeader(
+                    crumbs = backStack.breadcrumbs(),
+                    onBack = { leaveTo(backStack.pop()) },
+                    onCrumbClick = { index -> leaveTo(backStack.popTo(index)) },
+                )
             }
         },
     ) { innerPadding ->
@@ -104,20 +119,30 @@ fun ReevzHabitzApp() {
                     onMarkNotDone = home::markNotDone,
                 )
                 Destination.Menu -> MenuScreen(onOpen = navigate)
-                Destination.AddHabit -> AddHabitScreen(today = today, onCreated = goBack)
-                Destination.RemoveHabit -> RemoveHabitScreen(onRemoved = goBack)
+                Destination.AddHabit -> AddHabitScreen(
+                    today = today,
+                    onCreated = finish(Destination.AddHabit),
+                )
+                Destination.RemoveHabit -> RemoveHabitScreen(
+                    onRemoved = finish(Destination.RemoveHabit),
+                )
                 Destination.EditHabitList -> EditHabitListScreen(
                     onOpen = { navigate(Destination.EditHabit(it)) },
                 )
                 // Keyed by habit, so one habit's unsaved edits can never carry into another's.
                 is Destination.EditHabit -> key(current.habitId) {
-                    EditHabitScreen(habitId = current.habitId, onDone = goBack)
+                    EditHabitScreen(
+                        habitId = current.habitId,
+                        leaveGuard = leaveGuard,
+                        onLeave = commitLeave,
+                        onDone = finish(current),
+                    )
                 }
                 Destination.StatisticsList -> StatisticsListScreen(
                     onOpen = { navigate(Destination.HabitStatistics(it)) },
                 )
                 is Destination.HabitStatistics -> key(current.habitId) {
-                    HabitStatisticsScreen(habitId = current.habitId, onGone = goBack)
+                    HabitStatisticsScreen(habitId = current.habitId, onGone = finish(current))
                 }
                 Destination.Settings -> SettingsScreen()
             }

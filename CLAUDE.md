@@ -184,8 +184,13 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   `ui/common/activeHabitsInHomeOrder`) → editor for name/description/colour/icon only. Save is
   enabled only for a real, complete change (`HabitEdits.changes`, normalised like Add). Back with
   changes asks "Discard changes?". The editor is `key`ed by habit id in the shell.
-- **The header back arrow goes through the system `OnBackPressedDispatcher`**, not straight to
-  `goBack`, so any screen's `BackHandler` intercepts the arrow and the gesture alike.
+- **Leaving a screen goes through `ui/navigation/LeaveGuard`.** System back, the header arrow and
+  a tapped breadcrumb all call the shell's `leaveTo(target stack)`; the screen on top can hold it
+  up with `InterceptLeaving` (the Edit Habit editor, to ask "Discard changes?") and later approve
+  it, landing on exactly the tapped target. Screens finishing their own job (Create, Save,
+  Remove, Statistics' "habit gone") use `finish(screen)` = `popIfCurrent`, never a blind pop, so
+  a breadcrumb tapped mid-save is never overruled. Breadcrumb crumbs before the current one are
+  buttons (`BreadcrumbHeader`, tagged `breadcrumbs` for tests); `popTo(index)` jumps to them.
 - `ui/habitform/HabitFormLayout` — `HabitFormScaffold` (scrolling form + fixed bottom-right action)
   and `HabitDetailsFields` (name, description, colour, icon), shared by Add and Edit.
 - `ui/statistics/` — Statistics list (started active habits, then a "Deleted" section) → one

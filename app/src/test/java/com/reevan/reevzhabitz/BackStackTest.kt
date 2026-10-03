@@ -4,6 +4,8 @@ import com.reevan.reevzhabitz.ui.navigation.Destination
 import com.reevan.reevzhabitz.ui.navigation.InitialBackStack
 import com.reevan.reevzhabitz.ui.navigation.breadcrumbs
 import com.reevan.reevzhabitz.ui.navigation.pop
+import com.reevan.reevzhabitz.ui.navigation.popIfCurrent
+import com.reevan.reevzhabitz.ui.navigation.popTo
 import com.reevan.reevzhabitz.ui.navigation.push
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
@@ -28,6 +30,37 @@ class BackStackTest {
     @Test
     fun pop_neverRemovesHome() {
         assertEquals(InitialBackStack, InitialBackStack.pop())
+    }
+
+    @Test
+    fun popTo_jumpsBackToTheTappedCrumb() {
+        val stack = InitialBackStack
+            .push(Destination.Menu)
+            .push(Destination.StatisticsList)
+            .push(Destination.HabitStatistics(5))
+        assertEquals(InitialBackStack, stack.popTo(0))
+        assertEquals(listOf(Destination.Home, Destination.Menu), stack.popTo(1))
+        assertEquals(stack.dropLast(1), stack.popTo(2))
+        assertEquals(stack, stack.popTo(3))          // the current crumb: nowhere to go
+        assertEquals(stack, stack.popTo(99))         // out of range is clamped, never throws
+        assertEquals(InitialBackStack, stack.popTo(-1))
+    }
+
+    @Test
+    fun popIfCurrent_onlyPopsTheScreenStillOnTop() {
+        val adding = InitialBackStack.push(Destination.Menu).push(Destination.AddHabit)
+        assertEquals(adding.dropLast(1), adding.popIfCurrent(Destination.AddHabit))
+
+        // The user tapped the "Menu" crumb while Create was saving: Create's finish must not
+        // then pop the Menu too.
+        val alreadyLeft = adding.popTo(1)
+        assertEquals(alreadyLeft, alreadyLeft.popIfCurrent(Destination.AddHabit))
+
+        // Per-habit screens compare by habit, not just by kind.
+        val editing = InitialBackStack.push(Destination.EditHabit(1))
+        assertEquals(editing, editing.popIfCurrent(Destination.EditHabit(2)))
+        assertEquals(InitialBackStack, editing.popIfCurrent(Destination.EditHabit(1)))
+        assertEquals(InitialBackStack, InitialBackStack.popIfCurrent(Destination.Home))
     }
 
     @Test

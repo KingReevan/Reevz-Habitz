@@ -19,6 +19,21 @@ fun List<Destination>.push(destination: Destination): List<Destination> = this +
 /** Drops the top screen. Never empties the stack: Home stays. */
 fun List<Destination>.pop(): List<Destination> = if (size > 1) dropLast(1) else this
 
+/**
+ * Jumps back to the screen at [index] — a tapped breadcrumb — dropping everything above it. An
+ * index past the top changes nothing; Home (index 0) always stays.
+ */
+fun List<Destination>.popTo(index: Int): List<Destination> =
+    take(index.coerceIn(0, lastIndex) + 1)
+
+/**
+ * Pops [screen] only if it is still on top. For a screen finishing its own job (Create, Save,
+ * Remove) after an async write: if the user has already left it — say, by tapping a breadcrumb
+ * while the save ran — a blind pop would take them one screen further than they chose.
+ */
+fun List<Destination>.popIfCurrent(screen: Destination): List<Destination> =
+    if (lastOrNull() == screen) pop() else this
+
 /** The breadcrumb trail for the current screen, e.g. ["Home", "Menu", "Add Habit"]. */
 fun List<Destination>.breadcrumbs(): List<String> = map { it.label }
 

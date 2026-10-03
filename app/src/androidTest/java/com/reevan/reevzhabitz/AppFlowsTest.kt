@@ -1,6 +1,13 @@
 package com.reevan.reevzhabitz
 
 import android.content.Context
+import androidx.compose.ui.semantics.SemanticsNode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertHasNoClickAction
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
@@ -28,6 +35,7 @@ import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDatabase
 import com.reevan.reevzhabitz.data.HomeSort
 import com.reevan.reevzhabitz.data.ThemeMode
+import com.reevan.reevzhabitz.ui.common.BREADCRUMBS_TAG
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -90,6 +98,26 @@ class AppFlowsTest {
 
     private fun top(text: String): Float =
         rule.onNodeWithText(text).fetchSemanticsNode().boundsInRoot.top
+
+    /** The breadcrumb trail as shown, e.g. ["Home", "Menu", "Settings"]. */
+    private fun crumbs(): List<String> {
+        val trail = rule.onNodeWithTag(BREADCRUMBS_TAG, useUnmergedTree = true).fetchSemanticsNode()
+        val texts = mutableListOf<String>()
+        fun walk(node: SemanticsNode) {
+            node.config.getOrNull(SemanticsProperties.Text)?.let { parts ->
+                texts += parts.joinToString("") { it.text }
+            }
+            node.children.forEach(::walk)
+        }
+        walk(trail)
+        return texts
+    }
+
+    private fun waitForCrumbs(vararg expected: String) =
+        rule.waitUntil(10_000) { runCatching { crumbs() == expected.toList() }.getOrDefault(false) }
+
+    private fun crumb(name: String) =
+        rule.onNode(hasText(name) and hasAnyAncestor(hasTestTag(BREADCRUMBS_TAG)))
 
     private fun openMenu() {
         rule.waitUntilAtLeastOneExists(hasContentDescription("Menu"), 10_000)
@@ -193,13 +221,89 @@ class AppFlowsTest {
     @Test
     fun navigation_breadcrumbsAndBack() {
         openMenu()
-        waitForText("Home  >  Menu")
+        waitForCrumbs("Home", "Menu")
         rule.onNodeWithText("SETTINGS").performClick()
-        waitForText("Home  >  Menu  >  Settings")
+        waitForCrumbs("Home", "Menu", "Settings")
         rule.onNodeWithContentDescription("Back").performClick()
         waitForText("ADD HABIT")
         Espresso.pressBack()
         rule.waitUntilAtLeastOneExists(hasContentDescription("Menu"))
+    }
+
+    @Test
+    fun breadcrumbs_jumpStraightToAnyEarlierScreen() {
+        insert(habit("Crumbed", start = today.minusDays(1)))
+        openFromMenu("STATISTICS")
+        waitForText("Crumbed")
+        rule.onNodeWithText("Crumbed").performClick()
+        waitForCrumbs("Home", "Menu", "Statistics", "Stats")
+        crumb("Stats").assertHasNoClickAction()                 // the current screen
+
+        crumb("Statistics").performClick()
+        waitForCrumbs("Home", "Menu", "Statistics")
+        rule.onNodeWithText("Crumbed").performClick()
+        waitForCrumbs("Home", "Menu", "Statistics", "Stats")
+
+        crumb("Menu").performClick()                            // two screens in one tap
+        waitForCrumbs("Home", "Menu")
+        rule.onNodeWithText("SETTINGS").performClick()
+        waitForCrumbs("Home", "Menu", "Settings")
+
+        crumb("Home").performClick()
+        rule.waitUntilAtLeastOneExists(hasContentDescription("Menu"))
+        rule.onNodeWithContentDescription("Back").assertDoesNotExist()
+    }
+
+    @Test
+    fun breadcrumbs_fromAnEditorWithChanges_askThenGoWhereTapped() {
+        val (id) = insert(habit("Guarded", color = "coral"))
+        openFromMenu("EDIT HABIT")
+        waitForText("Guarded")
+        rule.onNodeWithText("Guarded").performClick()
+        waitForText("Save")
+
+        // Nothing changed: a crumb leaves at once.
+        crumb("Menu").performClick()
+        waitForCrumbs("Home", "Menu")
+
+        rule.onNodeWithText("EDIT HABIT").performClick()
+        waitForText("Guarded")
+        rule.onNodeWithText("Guarded").performClick()
+        waitForText("Save")
+        rule.onNodeWithContentDescription("Green").performScrollTo().performClick()
+
+        // Changed: asks first. Keep editing stays put with the change intact.
+        crumb("Home").performClick()
+        waitForText("Discard changes?")
+        rule.onNodeWithText("Keep editing").performClick()
+        waitForCrumbs("Home", "Menu", "Edit Habit", "Edit")
+        rule.onNodeWithText("Save").assertIsEnabled()
+
+        // Discard goes to the crumb that was tapped — the Menu, two screens up — not one back.
+        crumb("Menu").performClick()
+        waitForText("Discard changes?")
+        rule.onNodeWithText("Discard").performClick()
+        waitForCrumbs("Home", "Menu")
+        rule.onNodeWithText("ADD HABIT").assertIsDisplayed()
+        assertEquals("coral", runBlocking { db.habitDao().getById(id)!!.colorKey })
+    }
+
+    @Test
+    fun breadcrumbs_discardDialogSurvivesRotationAndKeepsItsTarget() {
+        insert(habit("Rotated", color = "coral"))
+        openFromMenu("EDIT HABIT")
+        waitForText("Rotated")
+        rule.onNodeWithText("Rotated").performClick()
+        waitForText("Save")
+        rule.onNodeWithContentDescription("Green").performScrollTo().performClick()
+        crumb("Home").performClick()
+        waitForText("Discard changes?")
+
+        rule.activityRule.scenario.recreate()
+        waitForText("Discard changes?")
+        rule.onNodeWithText("Discard").performClick()
+        rule.waitUntilAtLeastOneExists(hasContentDescription("Menu"))   // Home, as tapped
+        rule.onNodeWithContentDescription("Back").assertDoesNotExist()
     }
 
     // ---- Add Habit -------------------------------------------------------------------------
@@ -267,9 +371,9 @@ class AppFlowsTest {
             click()
             click()
         }
-        waitForText("Home  >  Menu  >  Edit Habit")
+        waitForCrumbs("Home", "Menu", "Edit Habit")
         rule.waitForIdle()
-        rule.onNodeWithText("Home  >  Menu  >  Edit Habit").assertIsDisplayed()
+        assertEquals(listOf("Home", "Menu", "Edit Habit"), crumbs())
     }
 
     @Test
@@ -345,7 +449,7 @@ class AppFlowsTest {
         waitForText("Editable")
         rule.onNodeWithText("Editable").performClick()
         waitForText("Save")
-        rule.onNodeWithText("Home  >  Menu  >  Edit Habit  >  Edit").assertIsDisplayed()
+        waitForCrumbs("Home", "Menu", "Edit Habit", "Edit")
         rule.onNodeWithText("Save").assertIsNotEnabled()
 
         // Back with no change leaves at once.
@@ -403,7 +507,7 @@ class AppFlowsTest {
         assertTrue(top("Deleted") < top("Retired"))
 
         rule.onNodeWithText("Tracked").performClick()
-        waitForText("Home  >  Menu  >  Statistics  >  Stats")
+        waitForCrumbs("Home", "Menu", "Statistics", "Stats")
         rule.onNodeWithText("Days done").assertDoesNotExist()      // collapsed by default
         rule.onNodeWithText("Tracked").performClick()               // the strip
         waitForText("Days done")
@@ -431,7 +535,7 @@ class AppFlowsTest {
             openFromMenu("STATISTICS")
             waitForText(name)
             rule.onNodeWithText(name).performClick()
-            waitForText("Home  >  Menu  >  Statistics  >  Stats")
+            waitForCrumbs("Home", "Menu", "Statistics", "Stats")
             rule.onNodeWithText(name).performClick()           // expand the strip
             waitForText("Days done")
         }
