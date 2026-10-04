@@ -76,6 +76,11 @@ ICONS = [
     ("code", "code"),
     ("podcast", "podcasts"),
     ("gratitude", "volunteer_activism"),
+    ("brain", "neurology"),
+    ("chess", "chess"),
+    ("puzzle", "extension"),
+    ("library", "local_library"),
+    ("quiz", "quiz"),
     # Creative
     ("music", "music_note"),
     ("piano", "piano"),

@@ -70,6 +70,11 @@ object HabitIcons {
         HabitIcon("code", "Code", R.drawable.habit_code),
         HabitIcon("podcast", "Podcast", R.drawable.habit_podcast),
         HabitIcon("gratitude", "Gratitude", R.drawable.habit_gratitude),
+        HabitIcon("brain", "Brain", R.drawable.habit_brain),
+        HabitIcon("chess", "Chess", R.drawable.habit_chess),
+        HabitIcon("puzzle", "Puzzle", R.drawable.habit_puzzle),
+        HabitIcon("library", "Library", R.drawable.habit_library),
+        HabitIcon("quiz", "Quiz", R.drawable.habit_quiz),
         // Creative
         HabitIcon("music", "Music", R.drawable.habit_music),
         HabitIcon("piano", "Piano", R.drawable.habit_piano),
