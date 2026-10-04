@@ -25,7 +25,8 @@ data class HabitzColors(
     val divider: Color,
     /**
      * A habit ticked off on Home: its edge, name and checkbox all fade to this grey. Dark enough
-     * for the white icon to stay visible on it, light enough for the name to stay readable.
+     * for the white icon to stay visible on it, light enough for the name to stay readable, and
+     * unlike every habit colour, so a ticked habit never looks like an unticked one in that colour.
      */
     val doneHabit: Color,
     /** Statistics: a day the habit was done. */
@@ -238,7 +239,7 @@ internal val TokyoNightScheme: ColorScheme = darkColorScheme(
 internal val TokyoNightHabitz = HabitzColors(
     isDark = true,
     divider = Color(0xFF292E42),
-    doneHabit = Color(0xFF737AA2),
+    doneHabit = Color(0xFF7C7A86),
     done = Color(0xFF9ECE6A),
     missed = Color(0xFFF7768E),
     future = Color(0xFF3B4261),

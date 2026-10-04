@@ -145,7 +145,9 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   colour off. Material roles via `MaterialTheme.colorScheme`; app-only colours (card divider,
   Statistics done/missed/future/today ring) via `HabitzTheme.colors`. `HabitColors` (35) and
   `HabitIcons` (98) map stable string keys — the values stored in `habits.colorKey/iconKey` — to
-  colours and drawables. Keys are never renamed or removed. Each habit colour has a light-theme
+  colours and drawables. Keys are never renamed or removed; a colour taken out of the picker
+  moves to `HabitColors.retired` so habits using it still resolve. No habit colour may look like
+  the ticked-habit grey (`doneHabit`) — `ThemeColorsTest` keeps them ΔE ≥ 12 apart in every theme. Each habit colour has a light-theme
   and a dark-theme shade; read it with `habitColor.current`. `ThemeColorsTest` enforces contrast for
   every theme and habit colour — run it after touching any colour.
 - Home and Remove tick with `HabitCheckSection` (in `HabitCard.kt`): a full-height, separately

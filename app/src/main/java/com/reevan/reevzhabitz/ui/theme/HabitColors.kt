@@ -65,12 +65,20 @@ object HabitColors {
         HabitColor("lavender", "Lavender", light = Color(0xFF6757B4), dark = Color(0xFF8E83C7)),
         HabitColor("plum", "Plum", light = Color(0xFF874F99), dark = Color(0xFFAA79BA)),
         HabitColor("mauve", "Mauve", light = Color(0xFF8E507F), dark = Color(0xFFB479A5)),
+        HabitColor("berry", "Berry", light = Color(0xFFAC3A73), dark = Color(0xFFCE6B9C)),
         HabitColor("wine", "Wine", light = Color(0xFFA0485E), dark = Color(0xFFC17588)),
         HabitColor("taupe", "Taupe", light = Color(0xFF706355), dark = Color(0xFF998978)),
+    )
+
+    /**
+     * Colours no longer offered, kept so a habit that already uses one still shows it. Grey went
+     * because it looked like a habit ticked off on Home (`HabitzColors.doneHabit`).
+     */
+    private val retired: List<HabitColor> = listOf(
         HabitColor("grey", "Grey", light = Color(0xFF656565), dark = Color(0xFF8C8C8C)),
     )
 
-    private val byKey: Map<String, HabitColor> = all.associateBy { it.key }
+    private val byKey: Map<String, HabitColor> = (all + retired).associateBy { it.key }
 
     /** The colour for a stored key. An unknown key falls back rather than crashing a screen. */
     fun forKey(key: String): HabitColor = byKey[key] ?: all.first()

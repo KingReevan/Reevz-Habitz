@@ -1,6 +1,7 @@
 package com.reevan.reevzhabitz
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.colorspace.ColorSpaces
 import androidx.compose.ui.graphics.luminance
 import com.reevan.reevzhabitz.data.ThemeMode
 import com.reevan.reevzhabitz.ui.theme.HabitColors
@@ -12,6 +13,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlin.math.pow
+import kotlin.math.sqrt
 
 /**
  * Guards legibility across all four themes, using WCAG contrast ratios: 4.5 for body text, 3.0
@@ -95,6 +98,37 @@ class ThemeColorsTest {
         assertEquals(keys.size, keys.toSet().size)
         assertSame(HabitColors.all.first(), HabitColors.forKey("no-such-colour"))
         assertSame(HabitColors.all[3], HabitColors.forKey(keys[3]))
+    }
+
+    @Test
+    fun habitColours_retiredKeysStillResolveButAreNotOffered() {
+        assertEquals("grey", HabitColors.forKey("grey").key)
+        assertTrue(HabitColors.all.none { it.key == "grey" })
+    }
+
+    /** Perceived difference between two colours: distance in CIE Lab (ΔE 1976). */
+    private fun difference(a: Color, b: Color): Double {
+        val x = a.convert(ColorSpaces.CieLab)
+        val y = b.convert(ColorSpaces.CieLab)
+        return sqrt(
+            (x.red - y.red).toDouble().pow(2) +
+                (x.green - y.green).toDouble().pow(2) +
+                (x.blue - y.blue).toDouble().pow(2),
+        )
+    }
+
+    @Test
+    fun doneHabitGrey_looksLikeNoHabitColour() {
+        // A ticked habit fades to this grey. Were a habit colour close to it, an unticked habit in
+        // that colour would look done. 12 is about the gap between the palette's closest pair.
+        ThemeMode.entries.forEach { mode ->
+            val grey = mode.habitzColors().doneHabit
+            HabitColors.all.forEach { color ->
+                val shade = if (mode.isDark) color.dark else color.light
+                val gap = difference(grey, shade)
+                assertTrue("${color.key} vs done grey in $mode: %.1f".format(gap), gap >= 12.0)
+            }
+        }
     }
 
     @Test
