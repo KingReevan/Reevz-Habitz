@@ -14,7 +14,7 @@ import androidx.compose.ui.graphics.Color
  *   background, yet still dark enough for the white icon to stand out on the edge.
  *
  * Generated from a hue and a target luminance, so every colour clears the same contrast bar;
- * `HabitColorsTest` enforces it. [key] is what the database stores — never rename or remove one.
+ * `ThemeColorsTest` enforces it. [key] is what the database stores — never rename or remove one.
  */
 data class HabitColor(
     val key: String,
@@ -52,8 +52,21 @@ object HabitColors {
         HabitColor("magenta", "Magenta", light = Color(0xFFA826B2), dark = Color(0xFFD358DC)),
         HabitColor("pink", "Pink", light = Color(0xFFBD1B77), dark = Color(0xFFE754A7)),
         HabitColor("rose", "Rose", light = Color(0xFFC5164B), dark = Color(0xFFEC5583)),
+        // Muted and earthy tones.
+        HabitColor("salmon", "Salmon", light = Color(0xFFB03F33), dark = Color(0xFFD26F64)),
         HabitColor("brown", "Brown", light = Color(0xFF895A3B), dark = Color(0xFFB87E58)),
+        HabitColor("ochre", "Ochre", light = Color(0xFF845E26), dark = Color(0xFFB58234)),
+        HabitColor("sand", "Sand", light = Color(0xFF756339), dark = Color(0xFFA2894E)),
+        HabitColor("moss", "Moss", light = Color(0xFF596C34), dark = Color(0xFF7B9448)),
+        HabitColor("sage", "Sage", light = Color(0xFF466D53), dark = Color(0xFF619873)),
+        HabitColor("steel", "Steel", light = Color(0xFF3D6B7E), dark = Color(0xFF5693AE)),
         HabitColor("slate", "Slate", light = Color(0xFF536782), dark = Color(0xFF798DAA)),
+        HabitColor("denim", "Denim", light = Color(0xFF4262AE), dark = Color(0xFF708BC9)),
+        HabitColor("lavender", "Lavender", light = Color(0xFF6757B4), dark = Color(0xFF8E83C7)),
+        HabitColor("plum", "Plum", light = Color(0xFF874F99), dark = Color(0xFFAA79BA)),
+        HabitColor("mauve", "Mauve", light = Color(0xFF8E507F), dark = Color(0xFFB479A5)),
+        HabitColor("wine", "Wine", light = Color(0xFFA0485E), dark = Color(0xFFC17588)),
+        HabitColor("taupe", "Taupe", light = Color(0xFF706355), dark = Color(0xFF998978)),
         HabitColor("grey", "Grey", light = Color(0xFF656565), dark = Color(0xFF8C8C8C)),
     )
 
