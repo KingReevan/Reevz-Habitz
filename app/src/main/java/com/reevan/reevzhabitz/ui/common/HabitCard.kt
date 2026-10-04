@@ -15,18 +15,25 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -42,13 +49,16 @@ import com.reevan.reevzhabitz.ui.theme.current
 private val EdgeWidth = 52.dp
 private val EdgeIconSize = 26.dp
 private val MinCardHeight = 56.dp
+private val CheckSectionWidth = 64.dp
+private const val CheckboxScale = 1.4f
 
 /**
  * One habit as a full-width card, shared by Home, Remove Habit, Edit Habit and Statistics.
  *
  * A coloured left edge carries the habit's icon in pure white; the name follows in the same colour
- * and wraps rather than running under [trailing]. [description] is shown only where a screen
- * asks for it (Remove, Edit, Statistics). [done] marks a habit ticked off on Home: the name is
+ * and wraps rather than running under [trailing] (on Home and Remove, a [HabitCheckSection]).
+ * [description] is shown only where a screen asks for it (Remove, Edit, Statistics). [done] marks
+ * a habit ticked off on Home: the name is
  * struck through and the edge and name fade to the theme's grey, so finished habits recede. Cards
  * are stacked with no gaps — put a [HabitCardDivider] between them.
  */
@@ -95,7 +105,7 @@ fun HabitCard(
             verticalArrangement = Arrangement.spacedBy(2.dp),
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 16.dp, end = if (trailing == null) 16.dp else 4.dp)
+                .padding(horizontal = 16.dp)
                 .padding(vertical = 12.dp),
         ) {
             Text(
@@ -116,6 +126,44 @@ fun HabitCard(
     }
 }
 
+/**
+ * A [HabitCard]'s tick target, for its trailing slot: a full-height section at the card's right
+ * end, set apart by its own shade and a divider, so the whole block — not just the small box —
+ * ticks. TalkBack reads it as "[label], checkbox, checked". [checkedColor] fills a ticked box.
+ */
+@Composable
+fun HabitCheckSection(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    label: String,
+    checkedColor: Color,
+) {
+    Row(Modifier.fillMaxHeight()) {
+        VerticalDivider(color = HabitzTheme.colors.divider)
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .width(CheckSectionWidth)
+                .fillMaxHeight()
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .toggleable(value = checked, role = Role.Checkbox, onValueChange = onCheckedChange)
+                .semantics { contentDescription = label },
+        ) {
+            // The section takes the tap; the box only draws.
+            Checkbox(
+                checked = checked,
+                onCheckedChange = null,
+                colors = CheckboxDefaults.colors(
+                    checkedColor = checkedColor,
+                    checkmarkColor = Color.White,
+                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
+                modifier = Modifier.scale(CheckboxScale),
+            )
+        }
+    }
+}
+
 /** The thin grey line between stacked habit cards. */
 @Composable
 fun HabitCardDivider(modifier: Modifier = Modifier) {
@@ -130,7 +178,7 @@ private fun SampleStack() {
                 name = "Drink Water",
                 color = HabitColors.forKey("sky"),
                 icon = HabitIcons.forKey("water"),
-                trailing = { Checkbox(checked = false, onCheckedChange = {}) },
+                trailing = { SampleCheck(checked = false) },
             )
             HabitCardDivider()
             HabitCard(
@@ -138,7 +186,7 @@ private fun SampleStack() {
                 color = HabitColors.forKey("violet"),
                 icon = HabitIcons.forKey("book"),
                 description = "Fiction or non-fiction, anything but the phone.",
-                trailing = { Checkbox(checked = false, onCheckedChange = {}) },
+                trailing = { SampleCheck(checked = false) },
             )
             HabitCardDivider()
             HabitCard(
@@ -146,11 +194,21 @@ private fun SampleStack() {
                 color = HabitColors.forKey("coral"),
                 icon = HabitIcons.forKey("dumbbell"),
                 done = true,
-                trailing = { Checkbox(checked = true, onCheckedChange = {}) },
+                trailing = { SampleCheck(checked = true) },
             )
             HabitCardDivider()
         }
     }
+}
+
+@Composable
+private fun SampleCheck(checked: Boolean) {
+    HabitCheckSection(
+        checked = checked,
+        onCheckedChange = {},
+        label = "Sample",
+        checkedColor = HabitzTheme.colors.doneHabit,
+    )
 }
 
 @Preview(name = "Light")

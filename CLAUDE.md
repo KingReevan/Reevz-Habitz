@@ -148,7 +148,10 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   colours and drawables. Keys are never renamed or removed. Each habit colour has a light-theme
   and a dark-theme shade; read it with `habitColor.current`. `ThemeColorsTest` enforces contrast for
   every theme and habit colour — run it after touching any colour.
-- Accessibility: Home and Remove checkboxes carry the habit name as their content description;
+- Home and Remove tick with `HabitCheckSection` (in `HabitCard.kt`): a full-height, separately
+  shaded block at the card's right end, the whole block being the tap target. Use it for any
+  card checkbox rather than a bare `Checkbox`.
+- Accessibility: Home and Remove check sections carry the habit name as their content description;
   headers and buttons use minimum (not fixed) heights so large system fonts don't clip.
 - `MainActivity` holds the first frame until settings load (no flash of the wrong theme) and sets
   system bar icon colours from the app theme, not the phone's.

@@ -65,6 +65,19 @@ class ThemeColorsTest {
     }
 
     @Test
+    fun checkSection_boxStandsOutFromItsShadeInEveryTheme() {
+        ThemeMode.entries.forEach { mode ->
+            val shade = mode.colorScheme().surfaceContainer
+            assertContrast(3.0, mode.colorScheme().onSurfaceVariant, shade, "$mode empty box")
+            assertContrast(3.0, mode.habitzColors().doneHabit, shade, "$mode done box")
+            HabitColors.all.forEach { color ->
+                val fill = if (mode.isDark) color.dark else color.light
+                assertContrast(3.0, fill, shade, "${color.key} selected box in $mode")
+            }
+        }
+    }
+
+    @Test
     fun habitColours_whiteIconsAndNamesAreReadableInEveryTheme() {
         HabitColors.all.forEach { color ->
             ThemeMode.entries.forEach { mode ->

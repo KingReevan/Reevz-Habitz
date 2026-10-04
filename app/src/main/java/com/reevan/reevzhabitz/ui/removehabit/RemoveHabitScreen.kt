@@ -16,8 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -30,16 +28,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.ui.common.HabitCard
+import com.reevan.reevzhabitz.ui.common.HabitCheckSection
 import com.reevan.reevzhabitz.ui.common.rememberSubmission
 import com.reevan.reevzhabitz.ui.common.HabitCardDivider
 import com.reevan.reevzhabitz.ui.theme.HabitColors
@@ -158,16 +154,11 @@ private fun SelectableHabitCard(
         icon = HabitIcons.forKey(habit.iconKey),
         description = habit.description,
         trailing = {
-            Checkbox(
+            HabitCheckSection(
                 checked = selected,
                 onCheckedChange = { onToggle() },
-                colors = CheckboxDefaults.colors(
-                    checkedColor = color.current,
-                    checkmarkColor = Color.White,
-                    uncheckedColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                ),
-                // Names the checkbox for TalkBack: "Gym, checkbox, not checked".
-                modifier = Modifier.semantics { contentDescription = habit.name },
+                label = habit.name,
+                checkedColor = color.current,
             )
         },
     )
