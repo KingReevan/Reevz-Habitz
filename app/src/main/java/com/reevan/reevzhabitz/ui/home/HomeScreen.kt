@@ -110,8 +110,8 @@ private fun HabitRow(item: HabitOnDay, onCheck: () -> Unit) {
             HabitCheckSection(
                 checked = item.done,
                 onCheckedChange = {
-                    // A light tick when a habit is done. Unticking only opens the prompt.
-                    if (!item.done) haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                    // A firm "done" buzz when a habit is ticked. Unticking only opens the prompt.
+                    if (!item.done) haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                     onCheck()
                 },
                 label = item.habit.name,
