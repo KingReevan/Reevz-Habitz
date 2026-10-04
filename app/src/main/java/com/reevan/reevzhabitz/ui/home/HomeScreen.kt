@@ -19,6 +19,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -97,6 +99,7 @@ fun HomeScreen(
 @Composable
 private fun HabitRow(item: HabitOnDay, onCheck: () -> Unit) {
     val color = HabitColors.forKey(item.habit.colorKey)
+    val haptics = LocalHapticFeedback.current
     HabitCard(
         name = item.habit.name,
         color = color,
@@ -106,7 +109,11 @@ private fun HabitRow(item: HabitOnDay, onCheck: () -> Unit) {
             // Only the check section ticks; the card body is not a target.
             HabitCheckSection(
                 checked = item.done,
-                onCheckedChange = { onCheck() },
+                onCheckedChange = {
+                    // A light tick when a habit is done. Unticking only opens the prompt.
+                    if (!item.done) haptics.performHapticFeedback(HapticFeedbackType.ToggleOn)
+                    onCheck()
+                },
                 label = item.habit.name,
                 // Only ever checked when done, so a checked box is always the done grey.
                 checkedColor = HabitzTheme.colors.doneHabit,
