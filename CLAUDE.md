@@ -172,6 +172,11 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   first. A ticked habit is struck through and its edge, name and checkbox fade to the theme's
   `HabitzTheme.colors.doneHabit` grey (contrast pinned by `ThemeColorsTest`). The sort is remembered in `app_settings.homeSort`; the header icon shows the current one.
   `HomeViewModel` lives in the shell because the header's sort button needs it.
+- Finishing the day (spec: Home → "All done for the day"): ticking the last habit pops a gold star
+  (`HabitzTheme.colors.star`) with a firmer buzz; a green card (`colors.done`) stays pinned at the
+  bottom while `isDayComplete`. Whether a *tick* finished the day is decided by the pure
+  `DayCompletionWatcher` (pinned by `DayCompletionTest`) once the tick lands in the list, never at
+  tap time — ticks arrive from the database a moment later and two quick taps can land together.
 - `app_settings` is written with per-column UPDATEs (`setThemeMode`, `cycleHomeSort`), never by
   rewriting the row, so two screens can't overwrite each other's preference.
 - Every Add Habit field is required (name, description, colour, icon); nothing is preselected.

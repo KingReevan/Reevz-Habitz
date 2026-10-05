@@ -9,6 +9,7 @@ import com.reevan.reevzhabitz.ui.theme.HabitIcons
 import com.reevan.reevzhabitz.ui.theme.colorScheme
 import com.reevan.reevzhabitz.ui.theme.habitzColors
 import com.reevan.reevzhabitz.ui.theme.isDark
+import com.reevan.reevzhabitz.ui.theme.readableOn
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
@@ -55,6 +56,16 @@ class ThemeColorsTest {
             assertContrast(3.0, extra.missed, bg, "$mode missed")
             assertContrast(1.5, extra.todayRing, bg, "$mode today ring")
             assertEquals(mode.isDark, extra.isDark)
+        }
+    }
+
+    @Test
+    fun allDoneCard_andStar_areReadableInEveryTheme() {
+        ThemeMode.entries.forEach { mode ->
+            val extra = mode.habitzColors()
+            val bg = mode.colorScheme().background
+            assertContrast(4.5, readableOn(extra.done), extra.done, "$mode all-done card text")
+            assertContrast(3.0, extra.star, bg, "$mode star")
         }
     }
 

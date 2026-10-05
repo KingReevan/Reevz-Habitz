@@ -5,6 +5,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 /*
  * The four themes. Each is a full Material colour scheme — including the surfaceContainer roles
@@ -37,6 +38,8 @@ data class HabitzColors(
     val future: Color,
     /** Statistics: the ring marking today. */
     val todayRing: Color,
+    /** Home: the gold star that pops up when the last habit of the day is ticked. */
+    val star: Color,
 )
 
 // ---- Light ---------------------------------------------------------------------------------
@@ -88,6 +91,7 @@ internal val LightHabitz = HabitzColors(
     missed = Color(0xFFC62828),
     future = Color(0xFFD0D0D5),
     todayRing = Color(0xFFF9A825),
+    star = Color(0xFFC28100),
 )
 
 // ---- Dark ----------------------------------------------------------------------------------
@@ -139,6 +143,7 @@ internal val DarkHabitz = HabitzColors(
     missed = Color(0xFFEF5350),
     future = Color(0xFF3A3A3D),
     todayRing = Color(0xFFFDD835),
+    star = Color(0xFFFDD835),
 )
 
 // ---- VS Code Dark --------------------------------------------------------------------------
@@ -193,6 +198,7 @@ internal val VsCodeDarkHabitz = HabitzColors(
     missed = Color(0xFFF14C4C),
     future = Color(0xFF3C3C3C),
     todayRing = Color(0xFFCCA700),
+    star = Color(0xFFCCA700),
 )
 
 // ---- Tokyo Night ---------------------------------------------------------------------------
@@ -244,4 +250,17 @@ internal val TokyoNightHabitz = HabitzColors(
     missed = Color(0xFFF7768E),
     future = Color(0xFF3B4261),
     todayRing = Color(0xFFE0AF68),
+    star = Color(0xFFE0AF68),
 )
+
+/**
+ * Black or white, whichever contrasts more with [background]. The status colours range from deep
+ * (Light's #2E7D32 green) to pale (Tokyo Night's #F7768E pink), so no single text colour reads on
+ * all of them.
+ */
+fun readableOn(background: Color): Color {
+    val l = background.luminance()
+    val onWhite = 1.05f / (l + 0.05f)
+    val onBlack = (l + 0.05f) / 0.05f
+    return if (onBlack > onWhite) Color.Black else Color.White
+}

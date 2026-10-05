@@ -7,6 +7,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertIsDisplayed
@@ -39,6 +40,7 @@ import com.reevan.reevzhabitz.ui.common.BREADCRUMBS_TAG
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -189,6 +191,43 @@ class AppFlowsTest {
         waitFor { !isDone(alpha) }
         rule.onNodeWithContentDescription("Alpha").assertIsOff()
         waitFor { top("Alpha") < top("Bravo") }
+    }
+
+    private fun exists(tag: String) = rule.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
+
+    @Test
+    fun home_tickingTheLastHabit_popsAStar_thenTheCardStaysUntilAnUntick() {
+        val (alpha, bravo) = insert(habit("Alpha"), habit("Bravo"))
+        waitForText("Alpha")
+
+        rule.onNodeWithContentDescription("Alpha").performClick()
+        waitFor { isDone(alpha) }
+        rule.waitForIdle()
+        assertFalse("Not the last habit: no star", exists("celebrationStar"))
+        assertFalse("Not all done: no card", exists("allDoneCard"))
+
+        rule.onNodeWithContentDescription("Bravo").performClick()
+        waitFor { exists("celebrationStar") }
+        waitForText("Everything is complete. You are Amazing!")
+        // The star is only a moment; the card stays.
+        waitFor { !exists("celebrationStar") }
+        rule.onNodeWithTag("allDoneCard").assertIsDisplayed()
+        assertTrue(isDone(bravo))
+
+        rule.onNodeWithContentDescription("Alpha").performClick()
+        waitForText("Mark as not done?")
+        rule.onNodeWithText("Confirm").performClick()
+        waitFor { !exists("allDoneCard") }
+        assertFalse(exists("celebrationStar"))
+    }
+
+    @Test
+    fun home_aDayAlreadyComplete_showsTheCardButNoStar() {
+        val (id) = insert(habit("Finished"))
+        runBlocking { db.completionDao().markDone(Completion(id, today)) }
+        waitForText("Everything is complete. You are Amazing!")
+        rule.waitForIdle()
+        assertFalse(exists("celebrationStar"))
     }
 
     @Test

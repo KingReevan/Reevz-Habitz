@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -51,6 +50,7 @@ import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.ui.theme.HabitColors
 import com.reevan.reevzhabitz.ui.theme.HabitIcons
 import com.reevan.reevzhabitz.ui.theme.HabitzTheme
+import com.reevan.reevzhabitz.ui.theme.readableOn
 import com.reevan.reevzhabitz.ui.theme.current
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
@@ -182,18 +182,6 @@ private fun StatsStrip(habit: Habit, summary: StatsSummary) {
             }
         }
     }
-}
-
-/**
- * Black or white, whichever contrasts more with [background]. The status colours range from deep
- * (Light's #2E7D32 green) to pale (Tokyo Night's #F7768E pink), so no single text colour reads on
- * all of them.
- */
-private fun readableOn(background: Color): Color {
-    val l = background.luminance()
-    val onWhite = 1.05f / (l + 0.05f)
-    val onBlack = (l + 0.05f) / 0.05f
-    return if (onBlack > onWhite) Color.Black else Color.White
 }
 
 private fun days(count: Int) = if (count == 1) "1 day" else "$count days"
