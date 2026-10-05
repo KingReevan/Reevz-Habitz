@@ -208,7 +208,7 @@ class AppFlowsTest {
 
         rule.onNodeWithContentDescription("Bravo").performClick()
         waitFor { exists("celebrationStar") }
-        waitForText("Everything is complete. You are Amazing!")
+        waitForText("Everything is complete. Fantastic!")
         // The star is only a moment; the card stays.
         waitFor { !exists("celebrationStar") }
         rule.onNodeWithTag("allDoneCard").assertIsDisplayed()
@@ -225,7 +225,7 @@ class AppFlowsTest {
     fun home_aDayAlreadyComplete_showsTheCardButNoStar() {
         val (id) = insert(habit("Finished"))
         runBlocking { db.completionDao().markDone(Completion(id, today)) }
-        waitForText("Everything is complete. You are Amazing!")
+        waitForText("Everything is complete. Fantastic!")
         rule.waitForIdle()
         assertFalse(exists("celebrationStar"))
     }

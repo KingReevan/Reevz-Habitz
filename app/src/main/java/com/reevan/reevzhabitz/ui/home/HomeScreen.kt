@@ -216,7 +216,7 @@ private fun AllDoneCard() {
                 modifier = Modifier.size(28.dp),
             )
             Text(
-                text = "Everything is complete. You are Amazing!",
+                text = "Everything is complete. Fantastic!",
                 style = MaterialTheme.typography.titleMedium,
             )
         }

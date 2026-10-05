@@ -54,7 +54,7 @@ The habits must appear every single day in their 'undone' status (unticked).
 
 After all the habits are ticked for a day, the user should feel good for completing them. When the user ticks the last habit of the day, a star pops up for a moment (a big gold star in the centre of the screen that pops, grows a little and fades out, with a firmer haptic) and then disappears. The star only appears when the user ticks the last habit for the day.
 
-After the star appears, a green card stays pinned at the bottom of the screen that says 'Everything is complete. You are Amazing!' The green card must only exist while all habits for the day are done: if the user unticks any habit, it goes away.
+After the star appears, a green card stays pinned at the bottom of the screen that says 'Everything is complete. Fantastic!' The green card must only exist while all habits for the day are done: if the user unticks any habit, it goes away.
 
 ---
 ## Menu Screen
