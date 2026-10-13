@@ -74,12 +74,15 @@ The header of the menu screen will just have a arrow on the left most side that 
 
 A generic timer for allocating time to a task before doing it, so there is no need to switch to the Clock app. It looks and works like the timer in Google's Clock app:
 
-- Set the time on a number pad (`1`–`9`, `00`, `0`, backspace). Digits fill `00h 00m 00s` from the right, so typing 5, 3, 0 reads `00h 05m 30s`. A play button appears once a time is typed.
-- Running, a ring counts down around the time left, with pause/resume, `+1:00` and Reset.
-- It keeps running when the user leaves the app or the screen turns off, with a notification showing the countdown (Pause/Resume, `+1:00`). Tapping the notification opens the Timer.
+- Every time the user creates is saved as a card, so the same time never has to be typed again. The Timer screen shows the saved timers as cards in a two-column grid, shortest first, with a `+` button to create a new one. With none saved yet, the number pad shows straight away.
+- Creating: set the time on a number pad (`1`–`9`, `00`, `0`, backspace). Digits fill `00h 00m 00s` from the right, so typing 5, 3, 0 reads `00h 05m 30s`. A play button appears once a time is typed; pressing it saves the time as a card and starts it.
+- Tapping a card opens that timer full screen (`Home > Menu > Timer > 25:00`): its full ring and time, a play button to start it, and a bin to delete it.
+- Running, a ring counts down around the time left, with pause/resume, `+1:00` and Reset. Reset (and Stop, once it has rung) brings the timer back to its full time, ready to start again. The running timer's card shows its time left.
+- One timer runs at a time. Starting another while one is running or paused asks first, then replaces it.
+- It keeps running when the user leaves the app or the screen turns off, with a notification showing the countdown (Pause/Resume, `+1:00`). Tapping the notification opens that timer.
 - When time is up it rings with the phone's alarm sound and vibrates until stopped, even with the app closed or the phone locked. The 'Time's up' alert offers Stop and `+1:00`.
 
-The header shows the breadcrumb `Home > Menu > Timer`.
+The header shows the breadcrumb `Home > Menu > Timer`, then `> New` on the number pad or `> 25:00` on a timer's page.
 
 ---
 ## Add Habit Screen

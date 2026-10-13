@@ -8,6 +8,8 @@ import com.reevan.reevzhabitz.ui.navigation.popIfCurrent
 import com.reevan.reevzhabitz.ui.navigation.popTo
 import com.reevan.reevzhabitz.ui.navigation.push
 import com.reevan.reevzhabitz.ui.navigation.pushFrom
+import com.reevan.reevzhabitz.ui.navigation.replaceTop
+import com.reevan.reevzhabitz.ui.navigation.timerBackStack
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThrows
 import org.junit.Test
@@ -90,6 +92,25 @@ class BackStackTest {
     }
 
     @Test
+    fun replaceTop_swapsOnlyTheScreenStillOnTop() {
+        val typing = InitialBackStack.push(Destination.Menu).push(Destination.Timer)
+            .push(Destination.NewTimer)
+        val started = typing.replaceTop(Destination.NewTimer, Destination.SavedTimer(60_000))
+        assertEquals(listOf("Home", "Menu", "Timer", "1:00"), started.breadcrumbs())
+        // Already left the number pad (a breadcrumb tapped): nothing to swap.
+        assertEquals(started, started.replaceTop(Destination.NewTimer, Destination.SavedTimer(5)))
+    }
+
+    @Test
+    fun timerNotification_landsOnTheRunningTimersPage() {
+        assertEquals(listOf("Home", "Menu", "Timer"), timerBackStack(null).breadcrumbs())
+        assertEquals(
+            listOf("Home", "Menu", "Timer", "25:00"),
+            timerBackStack(25 * 60_000).breadcrumbs(),
+        )
+    }
+
+    @Test
     fun menuEntries_areTheSixSectionsInSpecOrder() {
         assertEquals(
             listOf("Add Habit", "Remove Habit", "Edit Habit", "Statistics", "Settings", "Timer"),
@@ -108,6 +129,8 @@ class BackStackTest {
             Destination.StatisticsList,
             Destination.Settings,
             Destination.Timer,
+            Destination.NewTimer,
+            Destination.SavedTimer(25 * 60_000),
             Destination.EditHabit(42),
             Destination.HabitStatistics(7),
         )
@@ -117,8 +140,9 @@ class BackStackTest {
 
     @Test
     fun fromRoute_rejectsGarbage() {
-        listOf("", "nope", "edit/", "edit/abc", "stats/1/2", "home/3").forEach { route ->
-            assertThrows(IllegalArgumentException::class.java) { Destination.fromRoute(route) }
-        }
+        listOf("", "nope", "edit/", "edit/abc", "stats/1/2", "home/3", "timer/0", "timer/abc")
+            .forEach { route ->
+                assertThrows(IllegalArgumentException::class.java) { Destination.fromRoute(route) }
+            }
     }
 }

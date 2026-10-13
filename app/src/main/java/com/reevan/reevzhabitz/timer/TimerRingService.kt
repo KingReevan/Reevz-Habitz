@@ -29,11 +29,11 @@ class TimerRingService : Service() {
     private var vibrator: Vibrator? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val total = (TimerController.get(this).state.value as? TimerState.Ringing)?.total ?: 0
+        val preset = TimerController.get(this).state.value.preset ?: 0
         ServiceCompat.startForeground(
             this,
             TimerNotifications.RINGING_ID,
-            TimerNotifications.ringing(this, total),
+            TimerNotifications.ringing(this, preset),
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
             } else {

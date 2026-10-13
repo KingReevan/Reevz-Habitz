@@ -221,21 +221,29 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   From; earlier days red but uncounted; today/deletion day count only once ticked (streak survives
   an unticked today); after deletion grey. Opens on the current month (deletion month if deleted);
   pages from the creation month. Day numbers pick black/white by best contrast.
-- Timer (Menu > Timer, spec: Menu Screen → Timer) — Google Clock-style countdown that keeps going
-  with the app closed. **All rules are pure functions in `timer/TimerState.kt`** (states, +1:00,
-  keypad digits, display format), pinned by `TimerStateTest`; times are on the since-boot clock
-  (`SystemClock.elapsedRealtime`), never wall time. `timer/TimerController` (app-wide singleton) is
-  the only thing that changes the timer: it saves it to the `timer` SharedPreferences (cleared by a
-  reboot), sets an exact alarm for the end (`TimerReceiver` settles it — a coroutine delay would
+- Timer (Menu > Timer, spec: Menu Screen → Timer) — Google Clock-style. Saved timers are cards
+  (`TimerListScreen`, two-column grid, shortest first; empty → the number pad inline); + opens
+  `Destination.NewTimer` (number pad), whose Start saves + starts and `replaceTop`s itself with
+  `Destination.SavedTimer(duration)` (crumb "25:00": ready page with play + bin, or the countdown
+  when it is the one going). One timer at a time: `TimerState.preset` says which saved timer is
+  going (kept through pause/+1:00); starting another while one is underway asks first
+  (`rememberTimerStarter`). **All rules are pure functions in `timer/TimerState.kt`** (states,
+  preset, +1:00, saved-list order/encoding, keypad digits, display format), pinned by
+  `TimerStateTest`; times are on the since-boot clock (`SystemClock.elapsedRealtime`), never wall
+  time. `timer/TimerController` (app-wide singleton) is the only thing that changes the timer or
+  the saved list: saved lengths live in the `saved_timers` SharedPreferences (a list of numbers,
+  not habit data — deliberately not in Room); the running timer in `timer` (cleared by a reboot).
+  It sets an exact alarm for the end (`TimerReceiver` settles it — a coroutine delay would
   stall while the phone sleeps), keeps the countdown notification in step, and starts/stops
   `TimerRingService` (foreground, `mediaPlayback`: alarm sound on the alarm volume + vibration until
   Stop; its "Time's up" notification is a full-screen intent so the alert stays up). Manifest holds
   the permissions for this (notifications, exact alarm, full-screen intent, foreground service,
   vibrate, wake lock). Notifications open the app via `TimerNotifications.openTimerIntent` →
-  `MainActivity` → `ReevzHabitzApp(openTimerRequests)` → `TimerBackStack`. The countdown ticks with
+  `MainActivity` → `ReevzHabitzApp(openTimerRequests)` → `timerBackStack(preset)` (the running
+  timer's page). The countdown ticks with
   `withInfiniteAnimationFrameMillis` so Compose UI tests (which pause infinite animations) can idle;
-  in tests the real alarm rings the timer. `AppFlowsTest` resets the timer and grants
-  notifications before every test.
+  in tests the real alarm rings the timer. `AppFlowsTest` resets the timer, deletes saved
+  timers and grants notifications before every test.
 - Testing text input on the emulator: `adb shell input text` with a whole string types faster than
   the emulator keyboard keeps up with in a word-capitalising field and drops letters. Send one
   character per `input text` call to get human-pace typing.

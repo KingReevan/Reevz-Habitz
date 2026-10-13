@@ -79,11 +79,11 @@ object TimerNotifications {
     }
 
     /** The ringing service's foreground notification. */
-    fun ringing(context: Context, total: Long): Notification {
+    fun ringing(context: Context, preset: Long): Notification {
         ensureChannels(context)
         return base(context, RINGING_CHANNEL)
             .setContentTitle("Time's up")
-            .setContentText("${formatTimer(total)} timer")
+            .setContentText("${formatTimer(preset)} timer")
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)

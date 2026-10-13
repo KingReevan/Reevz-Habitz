@@ -15,7 +15,7 @@ change → build/test → report). At the end of every phase, update "Current pr
 | 6 | Edit Habit | List + editor with discard-changes guard | ✅ |
 | 7 | Statistics | Habit list (active + deleted), month calendar, stats accordion | ✅ |
 | 8 | Polish | Empty states, theme pass, lint, on-device verification | ✅ |
-| + | Timer (added 2026-10-13) | Menu > Timer: Clock-style countdown that runs and rings in the background | ✅ |
+| + | Timer (added 2026-10-13) | Menu > Timer: Clock-style saved timers (cards), countdown that runs and rings in the background | ✅ |
 
 ---
 

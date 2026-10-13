@@ -23,6 +23,10 @@ import kotlinx.coroutines.flow.asStateFlow
  * - **The notification** showing the countdown (or that it is paused).
  * - **The ring**: [TimerRingService] plays the alarm sound and vibrates while [TimerState.Ringing].
  *
+ * It also keeps the saved timers (the cards on the Timer screen), in a file of their own so that
+ * clearing a finished timer never touches them. They are a list of lengths, not habit data, so
+ * they live here rather than in the database.
+ *
  * The rules themselves are the pure functions in TimerState.kt.
  */
 class TimerController private constructor(private val app: Context) {
@@ -31,10 +35,25 @@ class TimerController private constructor(private val app: Context) {
     private val _state = MutableStateFlow(load())
     val state: StateFlow<TimerState> = _state.asStateFlow()
 
+    private val savedPrefs = app.getSharedPreferences("saved_timers", Context.MODE_PRIVATE)
+    private val _saved = MutableStateFlow(decodeTimers(savedPrefs.getString(KEY_SAVED, null)))
+
+    /** The saved timers' lengths, shortest first. */
+    val saved: StateFlow<List<Long>> = _saved.asStateFlow()
+
     fun now(): Long = SystemClock.elapsedRealtime()
 
+    /** Starts the timer [duration] afresh, replacing any other, and saves it if it is new. */
     fun start(duration: Long) {
-        if (duration > 0) update(startTimer(duration, now()))
+        if (duration <= 0) return
+        setSaved(saved.value.withTimer(duration))
+        update(startTimer(duration, now()))
+    }
+
+    /** Forgets the saved timer [duration], stopping it first if it is the one going. */
+    fun delete(duration: Long) {
+        if (state.value.preset == duration) reset()
+        setSaved(saved.value - duration)
     }
 
     fun pause() = update(state.value.paused(now()))
@@ -51,6 +70,12 @@ class TimerController private constructor(private val app: Context) {
 
     /** Re-posts the countdown notification, e.g. once the user allows notifications. */
     fun refreshNotification() = TimerNotifications.showCountdown(app, state.value, now())
+
+    @Synchronized
+    private fun setSaved(timers: List<Long>) {
+        _saved.value = timers
+        savedPrefs.edit { putString(KEY_SAVED, encodeTimers(timers)) }
+    }
 
     @Synchronized
     private fun update(next: TimerState) {
@@ -98,10 +123,13 @@ class TimerController private constructor(private val app: Context) {
             TimerState.Idle -> Unit
             is TimerState.Running -> putString(KEY_KIND, "running")
                 .putLong(KEY_AT, state.endsAt).putLong(KEY_TOTAL, state.total)
+                .putLong(KEY_PRESET, state.preset)
             is TimerState.Paused -> putString(KEY_KIND, "paused")
                 .putLong(KEY_AT, state.left).putLong(KEY_TOTAL, state.total)
+                .putLong(KEY_PRESET, state.preset)
             is TimerState.Ringing -> putString(KEY_KIND, "ringing")
                 .putLong(KEY_AT, state.since).putLong(KEY_TOTAL, state.total)
+                .putLong(KEY_PRESET, state.preset)
         }
     }
 
@@ -110,10 +138,11 @@ class TimerController private constructor(private val app: Context) {
         if (prefs.getInt(KEY_BOOT, -1) != bootCount()) return TimerState.Idle
         val at = prefs.getLong(KEY_AT, 0)
         val total = prefs.getLong(KEY_TOTAL, 0)
+        val preset = prefs.getLong(KEY_PRESET, total)
         return when (prefs.getString(KEY_KIND, null)) {
-            "running" -> TimerState.Running(at, total)
-            "paused" -> TimerState.Paused(at, total)
-            "ringing" -> TimerState.Ringing(at, total)
+            "running" -> TimerState.Running(at, total, preset)
+            "paused" -> TimerState.Paused(at, total, preset)
+            "ringing" -> TimerState.Ringing(at, total, preset)
             else -> TimerState.Idle
         }
     }
@@ -126,6 +155,8 @@ class TimerController private constructor(private val app: Context) {
         private const val KEY_AT = "at"
         private const val KEY_TOTAL = "total"
         private const val KEY_BOOT = "boot"
+        private const val KEY_PRESET = "preset"
+        private const val KEY_SAVED = "durations"
 
         // Holds only the application context, which lives exactly as long as the process.
         @SuppressLint("StaticFieldLeak")

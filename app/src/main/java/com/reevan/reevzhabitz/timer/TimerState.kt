@@ -7,42 +7,67 @@ import java.util.Locale
  * (`SystemClock.elapsedRealtime`): it counts time the phone spends asleep and never jumps when the
  * wall clock or time zone changes. Callers pass the current reading in as `now`, so every rule in
  * this file is pure.
+ *
+ * Only one timer runs at a time. [preset] is the saved timer it was started from (its card and
+ * page), which stays the same through pauses and +1:00s.
  */
 sealed interface TimerState {
-    /** Nothing set going: the keypad shows. */
+    /** Nothing going. */
     data object Idle : TimerState
 
     /** Counting down to [endsAt]. [total] is the length the ring measures against. */
-    data class Running(val endsAt: Long, val total: Long) : TimerState
+    data class Running(val endsAt: Long, val total: Long, val preset: Long = total) : TimerState
 
     /** Stopped with [left] to go. */
-    data class Paused(val left: Long, val total: Long) : TimerState
+    data class Paused(val left: Long, val total: Long, val preset: Long = total) : TimerState
 
     /** Ran out at [since], and rings until stopped. [total] is the length that ran out. */
-    data class Ringing(val since: Long, val total: Long) : TimerState
+    data class Ringing(val since: Long, val total: Long, val preset: Long = total) : TimerState
 }
 
 const val ONE_MINUTE: Long = 60_000
 
+/** Starts the saved timer [duration] afresh. */
 fun startTimer(duration: Long, now: Long): TimerState = TimerState.Running(now + duration, duration)
 
+/** The saved timer this one was started from, or null when nothing is going. */
+val TimerState.preset: Long?
+    get() = when (this) {
+        is TimerState.Running -> preset
+        is TimerState.Paused -> preset
+        is TimerState.Ringing -> preset
+        TimerState.Idle -> null
+    }
+
+/** Counting down or paused: starting another timer would cut it short, so that asks first. */
+val TimerState.isUnderway: Boolean
+    get() = this is TimerState.Running || this is TimerState.Paused
+
 fun TimerState.paused(now: Long): TimerState =
-    if (this is TimerState.Running) TimerState.Paused((endsAt - now).coerceAtLeast(0), total) else this
+    if (this is TimerState.Running) {
+        TimerState.Paused((endsAt - now).coerceAtLeast(0), total, preset)
+    } else {
+        this
+    }
 
 fun TimerState.resumed(now: Long): TimerState =
-    if (this is TimerState.Paused) TimerState.Running(now + left, total) else this
+    if (this is TimerState.Paused) TimerState.Running(now + left, total, preset) else this
 
 /** The +1:00 button. While ringing it silences the alarm and runs one more minute. */
 fun TimerState.plusMinute(now: Long): TimerState = when (this) {
-    is TimerState.Running -> TimerState.Running(endsAt + ONE_MINUTE, total + ONE_MINUTE)
-    is TimerState.Paused -> TimerState.Paused(left + ONE_MINUTE, total + ONE_MINUTE)
-    is TimerState.Ringing -> TimerState.Running(now + ONE_MINUTE, ONE_MINUTE)
+    is TimerState.Running -> TimerState.Running(endsAt + ONE_MINUTE, total + ONE_MINUTE, preset)
+    is TimerState.Paused -> TimerState.Paused(left + ONE_MINUTE, total + ONE_MINUTE, preset)
+    is TimerState.Ringing -> TimerState.Running(now + ONE_MINUTE, ONE_MINUTE, preset)
     TimerState.Idle -> this
 }
 
 /** A running timer whose end has passed starts ringing; anything else stays as it is. */
 fun TimerState.settled(now: Long): TimerState =
-    if (this is TimerState.Running && now >= endsAt) TimerState.Ringing(endsAt, total) else this
+    if (this is TimerState.Running && now >= endsAt) {
+        TimerState.Ringing(endsAt, total, preset)
+    } else {
+        this
+    }
 
 /** Time left, in milliseconds. Negative while ringing: how long ago it ran out. */
 fun TimerState.left(now: Long): Long = when (this) {
@@ -81,6 +106,16 @@ fun formatTimer(millis: Long): String {
     }
     return if (over) "-$body" else body
 }
+
+/** The saved timers with [duration] added: shortest first, each length once. */
+fun List<Long>.withTimer(duration: Long): List<Long> = (this + duration).distinct().sorted()
+
+/** The saved timers as stored: "60000,300000". */
+fun encodeTimers(timers: List<Long>): String = timers.joinToString(",")
+
+/** Reads [encodeTimers]' format back, skipping anything unreadable. */
+fun decodeTimers(text: String?): List<Long> =
+    text.orEmpty().split(',').mapNotNull { it.toLongOrNull() }.filter { it > 0 }.distinct().sorted()
 
 /**
  * What the keypad has typed, like the Clock app's: up to six digits that fill "hh mm ss" from the

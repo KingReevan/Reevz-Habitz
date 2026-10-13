@@ -44,6 +44,7 @@ import com.reevan.reevzhabitz.timer.TimerController
 import com.reevan.reevzhabitz.timer.TimerNotifications
 import com.reevan.reevzhabitz.timer.TimerState
 import com.reevan.reevzhabitz.timer.formatTimer
+import com.reevan.reevzhabitz.timer.preset
 import com.reevan.reevzhabitz.ui.common.BREADCRUMBS_TAG
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -82,6 +83,7 @@ class AppFlowsTest {
         override fun before() {
             db.clearAllTables()
             timer.reset()
+            timer.saved.value.forEach(timer::delete)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(
                     context.packageName,
@@ -737,12 +739,16 @@ class AppFlowsTest {
         waitForText(label)
     }
 
-    // ---- Settings --------------------------------------------------------------------------
+    // ---- Timer -----------------------------------------------------------------------------
+
+    private fun left(text: String): Float =
+        rule.onNodeWithText(text).fetchSemanticsNode().boundsInRoot.left
 
     @Test
-    fun timer_typeStartPauseResumeReset() {
+    fun timer_firstTime_numberPadStartsAndSavesACard_thatStartsAgainInOneTap() {
         openFromMenu("TIMER")
         waitForCrumbs("Home", "Menu", "Timer")
+        // Nothing saved yet: the number pad shows straight away.
         rule.onNodeWithContentDescription("Start").assertDoesNotExist()
 
         // Digits fill hh mm ss from the right, like the Clock app.
@@ -753,26 +759,87 @@ class AppFlowsTest {
         rule.onNodeWithText("0").performClick()
 
         rule.onNodeWithContentDescription("Start").performClick()
+        waitForCrumbs("Home", "Menu", "Timer", "1:30")
         waitFor { timer.state.value is TimerState.Running }
+        assertEquals(90_000L, timer.state.value.preset)
+        assertEquals(listOf(90_000L), timer.saved.value)
+
         rule.onNodeWithContentDescription("Pause").performClick()
         waitFor { timer.state.value is TimerState.Paused }
         val left = (timer.state.value as TimerState.Paused).left
         assertTrue("Paused partway: $left", left in 80_000..90_000)
         waitForText(formatTimer(left))
-
         rule.onNodeWithContentDescription("Resume").performClick()
         waitFor { timer.state.value is TimerState.Running }
+
+        // Reset brings the page back to its full time, ready to start again.
         rule.onNodeWithText("Reset").performClick()
         waitFor { timer.state.value == TimerState.Idle }
-        // Back on the keypad with the same time, ready to run again.
-        waitForText("00h 01m 30s")
+        rule.onNodeWithContentDescription("Start").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Delete timer").assertIsDisplayed()
+
+        // Back leads to the saved timers, not the number pad; the card starts it again.
+        rule.onNodeWithContentDescription("Back").performClick()
+        waitForCrumbs("Home", "Menu", "Timer")
+        rule.onNodeWithText("1:30").performClick()
+        waitForCrumbs("Home", "Menu", "Timer", "1:30")
+        rule.onNodeWithContentDescription("Start").performClick()
+        waitFor { timer.state.value is TimerState.Running }
+        assertEquals(90_000L, timer.state.value.preset)
     }
 
     @Test
-    fun timer_ringsWhenTimeIsUp_plusMinuteRunsOn_stopSilences() {
+    fun timer_cardsShortestFirst_plusMakesAnother_replacingAsks_binDeletes() {
+        val five = 5 * ONE_MINUTE
+        val twentyFive = 25 * ONE_MINUTE
+        timer.start(twentyFive)
+        timer.start(five)
+        timer.reset()
+
+        openFromMenu("TIMER")
+        waitForText("25:00")
+        assertTrue("5:00 before 25:00", left("5:00") < left("25:00"))
+
+        rule.onNodeWithContentDescription("New timer").performClick()
+        waitForCrumbs("Home", "Menu", "Timer", "New")
+        listOf("1", "0", "0").forEach { rule.onNodeWithText(it).performClick() }
+        rule.onNodeWithContentDescription("Start").performClick()
+        waitForCrumbs("Home", "Menu", "Timer", "1:00")
+        waitFor { timer.state.value.preset == ONE_MINUTE }
+        assertEquals(listOf(ONE_MINUTE, five, twentyFive), timer.saved.value)
+
+        // The running one's card says so.
+        rule.onNodeWithContentDescription("Back").performClick()
+        waitForCrumbs("Home", "Menu", "Timer")
+        waitForText("Running")
+
+        // Starting another while one runs asks first.
+        rule.onNodeWithText("25:00").performClick()
+        waitForCrumbs("Home", "Menu", "Timer", "25:00")
+        rule.onNodeWithContentDescription("Start").performClick()
+        waitForText("Replace the running timer?")
+        rule.onNodeWithText("Cancel").performClick()
+        assertEquals(ONE_MINUTE, timer.state.value.preset)
+        rule.onNodeWithContentDescription("Start").performClick()
+        waitForText("Replace the running timer?")
+        rule.onNodeWithText("Replace").performClick()
+        waitFor { timer.state.value.preset == twentyFive }
+
+        // The bin forgets it and returns to the cards.
+        rule.onNodeWithText("Reset").performClick()
+        waitFor { timer.state.value == TimerState.Idle }
+        rule.onNodeWithContentDescription("Delete timer").performClick()
+        waitForCrumbs("Home", "Menu", "Timer")
+        assertEquals(listOf(ONE_MINUTE, five), timer.saved.value)
+        rule.onNodeWithText("25:00").assertDoesNotExist()
+    }
+
+    @Test
+    fun timer_ringsWhenTimeIsUp_plusMinuteRunsOn_stopReturnsToReady() {
         openFromMenu("TIMER")
         rule.onNodeWithText("2").performClick()
         rule.onNodeWithContentDescription("Start").performClick()
+        waitForCrumbs("Home", "Menu", "Timer", "0:02")
 
         // The alarm settles it, as it would with the app closed.
         waitForText("Time's up", timeoutMillis = 20_000)
@@ -781,6 +848,7 @@ class AppFlowsTest {
         waitFor { timer.state.value is TimerState.Running }
         val running = timer.state.value as TimerState.Running
         assertEquals(ONE_MINUTE, running.total)
+        assertEquals(2_000L, running.preset)
         rule.onNodeWithText("Time's up").assertDoesNotExist()
 
         rule.onNodeWithText("Reset").performClick()
@@ -789,15 +857,23 @@ class AppFlowsTest {
         waitForText("Time's up", timeoutMillis = 20_000)
         rule.onNodeWithContentDescription("Stop").performClick()
         waitFor { timer.state.value == TimerState.Idle }
-        waitForText("00h 00m 02s")
+        rule.onNodeWithContentDescription("Start").assertIsDisplayed()
     }
 
     @Test
-    fun tappingATimerNotification_opensTheTimer() {
+    fun tappingATimerNotification_opensTheRunningTimersPage() {
         waitForText("No habits for today.\nAdd one from the menu.")
         context.startActivity(TimerNotifications.openTimerIntent(context))
         waitForCrumbs("Home", "Menu", "Timer")
+
+        timer.start(ONE_MINUTE)
+        crumb("Home").performClick()
+        waitForText("No habits for today.\nAdd one from the menu.")
+        context.startActivity(TimerNotifications.openTimerIntent(context))
+        waitForCrumbs("Home", "Menu", "Timer", "1:00")
     }
+
+    // ---- Settings --------------------------------------------------------------------------
 
     @Test
     fun settings_themeIsSaved() {

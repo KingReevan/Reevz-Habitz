@@ -9,14 +9,19 @@ import androidx.compose.runtime.saveable.listSaver
  * app, which the system does on its own.
  *
  * Hand-rolled instead of a navigation library: the app is at most four screens deep with one
- * argument (a habit id), so push and pop are all it needs. See docs/PLAN.md, decision T2.
+ * argument (a habit id or a timer length), so push and pop are all it needs. See docs/PLAN.md,
+ * decision T2.
  */
 
 val InitialBackStack: List<Destination> = listOf(Destination.Home)
 
-/** Where a tapped timer notification lands. */
-val TimerBackStack: List<Destination> =
-    listOf(Destination.Home, Destination.Menu, Destination.Timer)
+/**
+ * Where a tapped timer notification lands: the page of the saved timer [preset] that is going, or
+ * the Timer screen if none is.
+ */
+fun timerBackStack(preset: Long?): List<Destination> =
+    listOf(Destination.Home, Destination.Menu, Destination.Timer) +
+        listOfNotNull(preset?.let(Destination::SavedTimer))
 
 /**
  * Opens [destination] on top. Opening the screen that is already on top does nothing, so two taps
@@ -32,6 +37,13 @@ fun List<Destination>.push(destination: Destination): List<Destination> =
  */
 fun List<Destination>.pushFrom(from: Destination, destination: Destination): List<Destination> =
     if (lastOrNull() == from) push(destination) else this
+
+/**
+ * Swaps [from] for [destination], if [from] is still on top. A new timer's number pad hands over
+ * to that timer's page, so Back then leads to the saved timers rather than the number pad.
+ */
+fun List<Destination>.replaceTop(from: Destination, destination: Destination): List<Destination> =
+    if (lastOrNull() == from) dropLast(1).push(destination) else this
 
 /** Drops the top screen. Never empties the stack: Home stays. */
 fun List<Destination>.pop(): List<Destination> = if (size > 1) dropLast(1) else this

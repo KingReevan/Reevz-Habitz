@@ -17,10 +17,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reevan.reevzhabitz.R
+import com.reevan.reevzhabitz.timer.TimerController
+import com.reevan.reevzhabitz.timer.preset
 import com.reevan.reevzhabitz.ui.addhabit.AddHabitScreen
 import com.reevan.reevzhabitz.ui.common.BreadcrumbHeader
 import com.reevan.reevzhabitz.ui.common.DateHeader
@@ -32,7 +35,6 @@ import com.reevan.reevzhabitz.ui.home.SortButton
 import com.reevan.reevzhabitz.ui.menu.MenuScreen
 import com.reevan.reevzhabitz.ui.navigation.BackStackSaver
 import com.reevan.reevzhabitz.ui.navigation.Destination
-import com.reevan.reevzhabitz.ui.navigation.TimerBackStack
 import com.reevan.reevzhabitz.ui.navigation.InitialBackStack
 import com.reevan.reevzhabitz.ui.navigation.LeaveGuard
 import com.reevan.reevzhabitz.ui.navigation.breadcrumbs
@@ -40,11 +42,15 @@ import com.reevan.reevzhabitz.ui.navigation.pop
 import com.reevan.reevzhabitz.ui.navigation.popIfCurrent
 import com.reevan.reevzhabitz.ui.navigation.popTo
 import com.reevan.reevzhabitz.ui.navigation.pushFrom
+import com.reevan.reevzhabitz.ui.navigation.replaceTop
+import com.reevan.reevzhabitz.ui.navigation.timerBackStack
 import com.reevan.reevzhabitz.ui.removehabit.RemoveHabitScreen
 import com.reevan.reevzhabitz.ui.settings.SettingsScreen
 import com.reevan.reevzhabitz.ui.statistics.HabitStatisticsScreen
 import com.reevan.reevzhabitz.ui.statistics.StatisticsListScreen
-import com.reevan.reevzhabitz.ui.timer.TimerScreen
+import com.reevan.reevzhabitz.ui.timer.NewTimerScreen
+import com.reevan.reevzhabitz.ui.timer.SavedTimerScreen
+import com.reevan.reevzhabitz.ui.timer.TimerListScreen
 import com.reevan.reevzhabitz.util.TodayClock
 import com.reevan.reevzhabitz.util.formatHeaderDate
 
@@ -55,8 +61,8 @@ import com.reevan.reevzhabitz.util.formatHeaderDate
  * Home gets the date header; every other screen gets a back arrow and a breadcrumb whose earlier
  * crumbs jump straight back. System back pops one screen; from Home it leaves the app as usual.
  *
- * [openTimerRequests] goes up each time a timer notification is tapped; the Timer then opens, as
- * Home > Menu > Timer.
+ * [openTimerRequests] goes up each time a timer notification is tapped; the running timer's page
+ * then opens (Home > Menu > Timer > 25:00).
  */
 @Composable
 fun ReevzHabitzApp(openTimerRequests: Int = 0) {
@@ -91,8 +97,11 @@ fun ReevzHabitzApp(openTimerRequests: Int = 0) {
     BackHandler(enabled = backStack.size > 1) { leaveTo(backStack.pop()) }
 
     // Through leaveTo, so an Edit Habit editor with unsaved changes still asks first.
+    val context = LocalContext.current
     LaunchedEffect(openTimerRequests) {
-        if (openTimerRequests > 0 && current != Destination.Timer) leaveTo(TimerBackStack)
+        if (openTimerRequests == 0) return@LaunchedEffect
+        val target = timerBackStack(TimerController.get(context).state.value.preset)
+        if (backStack != target) leaveTo(target)
     }
 
     Scaffold(
@@ -159,7 +168,18 @@ fun ReevzHabitzApp(openTimerRequests: Int = 0) {
                     HabitStatisticsScreen(habitId = current.habitId, onGone = finish(current))
                 }
                 Destination.Settings -> SettingsScreen()
-                Destination.Timer -> TimerScreen()
+                Destination.Timer -> TimerListScreen(
+                    onOpen = { navigate(Destination.SavedTimer(it)) },
+                    onNew = { navigate(Destination.NewTimer) },
+                )
+                Destination.NewTimer -> NewTimerScreen(
+                    onStarted = {
+                        backStack = backStack.replaceTop(Destination.NewTimer, Destination.SavedTimer(it))
+                    },
+                )
+                is Destination.SavedTimer -> key(current.duration) {
+                    SavedTimerScreen(duration = current.duration, onDeleted = finish(current))
+                }
             }
         }
     }

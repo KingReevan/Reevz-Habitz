@@ -1,11 +1,5 @@
 package com.reevan.reevzhabitz.ui.timer
 
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -28,7 +22,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,17 +33,13 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -68,66 +57,58 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.reevan.reevzhabitz.R
 import com.reevan.reevzhabitz.timer.TimerController
 import com.reevan.reevzhabitz.timer.TimerDigits
 import com.reevan.reevzhabitz.timer.TimerState
-import com.reevan.reevzhabitz.timer.formatTimer
-import com.reevan.reevzhabitz.timer.fractionLeft
-import com.reevan.reevzhabitz.timer.left
+
+/*
+ * Pieces shared by the Timer screens (TimerScreens.kt): the number pad, the ring page and its
+ * big round button.
+ */
 
 private val KeySize = 76.dp
 private val KeyGap = 20.dp
 private val RingWidth = 10.dp
-private val SideSlot = 96.dp
+internal val SideSlot = 96.dp
 
-/**
- * Menu > Timer, laid out like the Clock app's. Set: type a time on the number pad, which fills
- * "hh mm ss" from the right, and press play. Then a ring counts down, with pause/resume, +1:00 and
- * Reset. When it runs out it rings, even with the app closed, until Stop.
- *
- * The timer lives in [TimerController], not here, so it carries on after you leave the screen.
- * The typed digits are this screen's own and survive Reset, to run the same time again.
- */
 @Composable
-fun TimerScreen(modifier: Modifier = Modifier) {
+internal fun rememberTimer(): TimerController {
     val context = LocalContext.current
-    val timer = remember(context) { TimerController.get(context) }
-    val state by timer.state.collectAsStateWithLifecycle()
-    var typed by rememberSaveable { mutableStateOf("") }
-    val digits = TimerDigits(typed)
-    // The timer runs whatever the answer; this only lets its notification show.
-    val askForNotifications = rememberLauncherForActivityResult(
-        ActivityResultContracts.RequestPermission(),
-    ) { granted -> if (granted) timer.refreshNotification() }
-
-    when (val current = state) {
-        TimerState.Idle -> TimerKeypad(
-            digits = digits,
-            onKey = { typed = digits.type(it).digits },
-            onBackspace = { typed = digits.backspace().digits },
-            onClear = { typed = "" },
-            onStart = {
-                if (needsNotificationPermission(context)) {
-                    askForNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-                timer.start(digits.duration)
-            },
-            modifier = modifier,
-        )
-        else -> TimerCountdown(state = current, timer = timer, modifier = modifier)
-    }
+    return remember(context) { TimerController.get(context) }
 }
 
-private fun needsNotificationPermission(context: Context): Boolean =
-    Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
-        PackageManager.PERMISSION_GRANTED
-
+/**
+ * The since-boot clock, re-read every frame while [state] is counting (for a smooth ring and live
+ * times). Reaching zero settles the timer right away, so it rings on time even if the alarm is a
+ * moment late. These are "infinite animation" frames, so UI tests (which pause those) can still
+ * see the screen go idle; there the alarm settles the timer.
+ */
 @Composable
-private fun TimerKeypad(
+internal fun rememberTimerNow(state: TimerState, timer: TimerController): State<Long> =
+    produceState(timer.now(), state) {
+        while (state is TimerState.Running || state is TimerState.Ringing) {
+            withInfiniteAnimationFrameMillis { }
+            value = timer.now()
+            if (state is TimerState.Running && value >= state.endsAt) timer.settle()
+        }
+    }
+
+/** Fades between full and faint: a paused time blinks and a ringing ring pulses, as in the Clock app. */
+@Composable
+internal fun rememberPulse(): Float {
+    val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
+        initialValue = 1f,
+        targetValue = 0.3f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = 600), RepeatMode.Reverse),
+        label = "pulse",
+    )
+    return pulse
+}
+
+/** The Clock app's number pad: type a time, which fills "hh mm ss" from the right, then play. */
+@Composable
+internal fun TimerKeypad(
     digits: TimerDigits,
     onKey: (String) -> Unit,
     onBackspace: () -> Unit,
@@ -250,29 +231,20 @@ private fun Key(
     }
 }
 
+/**
+ * A timer's full-screen page: the ring with [ringContent] inside, then a row with [leftSlot],
+ * the big [mainButton] centred, and an empty slot on the right to keep it centred.
+ */
 @Composable
-private fun TimerCountdown(state: TimerState, timer: TimerController, modifier: Modifier = Modifier) {
-    // Re-reads the clock every frame while counting, for a smooth ring. Reaching zero settles the
-    // timer right away, so it rings on time even if the alarm is a moment late. An "infinite
-    // animation" frame, so UI tests (which pause those) can still see the screen go idle; the
-    // alarm settles the timer there.
-    val now by produceState(timer.now(), state) {
-        while (state is TimerState.Running || state is TimerState.Ringing) {
-            withInfiniteAnimationFrameMillis { }
-            value = timer.now()
-            if (state is TimerState.Running && value >= state.endsAt) timer.settle()
-        }
-    }
-    val ringing = state is TimerState.Ringing
-    val paused = state is TimerState.Paused
-    // Paused blinks the time and ringing pulses the ring, like the Clock app.
-    val pulse by rememberInfiniteTransition(label = "pulse").animateFloat(
-        initialValue = 1f,
-        targetValue = 0.3f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 600), RepeatMode.Reverse),
-        label = "pulse",
-    )
-
+internal fun TimerPage(
+    fraction: Float,
+    ringColor: Color,
+    modifier: Modifier = Modifier,
+    ringAlpha: Float = 1f,
+    leftSlot: @Composable () -> Unit = {},
+    mainButton: @Composable () -> Unit,
+    ringContent: @Composable ColumnScope.() -> Unit,
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(40.dp, Alignment.CenterVertically),
@@ -281,62 +253,15 @@ private fun TimerCountdown(state: TimerState, timer: TimerController, modifier: 
             .verticalScroll(rememberScrollState())
             .padding(24.dp),
     ) {
-        TimerRing(
-            fraction = if (ringing) 1f else state.fractionLeft(now),
-            color = if (ringing) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-            ringAlpha = if (ringing) pulse else 1f,
-        ) {
-            if (ringing) {
-                Text(
-                    text = "Time's up",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
-            }
-            val reading = formatTimer(state.left(now))
-            Text(
-                text = reading,
-                style = if (reading.length > 5) {
-                    MaterialTheme.typography.displayMedium
-                } else {
-                    MaterialTheme.typography.displayLarge
-                },
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                softWrap = false,
-                modifier = Modifier.alpha(if (paused) pulse else 1f),
-            )
-            TextButton(
-                onClick = timer::addMinute,
-                modifier = Modifier
-                    .heightIn(min = 48.dp)
-                    .semantics { contentDescription = "Add one minute" },
-            ) {
-                Text("+1:00", style = MaterialTheme.typography.titleMedium)
-            }
-        }
+        TimerRing(fraction = fraction, color = ringColor, ringAlpha = ringAlpha, content = ringContent)
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // Reset on the left and an empty slot on the right keep the main button centred.
             Box(contentAlignment = Alignment.Center, modifier = Modifier.width(SideSlot)) {
-                if (!ringing) {
-                    TextButton(onClick = timer::reset, modifier = Modifier.heightIn(min = 48.dp)) {
-                        Text("Reset", style = MaterialTheme.typography.titleMedium)
-                    }
-                }
+                leftSlot()
             }
-            when {
-                ringing -> MainButton(
-                    icon = R.drawable.ic_stop,
-                    description = "Stop",
-                    onClick = timer::reset,
-                    alarm = true,
-                )
-                paused -> MainButton(R.drawable.ic_play, "Resume", timer::resume)
-                else -> MainButton(R.drawable.ic_pause, "Pause", timer::pause)
-            }
+            mainButton()
             Spacer(Modifier.width(SideSlot))
         }
     }
@@ -344,7 +269,7 @@ private fun TimerCountdown(state: TimerState, timer: TimerController, modifier: 
 
 /** The big round button: start, pause, resume, or stop the ringing. */
 @Composable
-private fun MainButton(icon: Int, description: String, onClick: () -> Unit, alarm: Boolean = false) {
+internal fun MainButton(icon: Int, description: String, onClick: () -> Unit, alarm: Boolean = false) {
     LargeFloatingActionButton(
         onClick = onClick,
         shape = CircleShape,
