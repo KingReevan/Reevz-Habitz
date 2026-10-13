@@ -14,14 +14,16 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import com.reevan.reevzhabitz.MainActivity
 import com.reevan.reevzhabitz.R
+import com.reevan.reevzhabitz.ui.timer.TimesUpActivity
 
 /**
  * The timer's two notifications. Tapping either opens the Timer screen.
  * - The countdown, while running or paused: quiet, with Pause/Resume and +1:00 (or Reset).
  * - "Time's up", while ringing: the ringing service's own notification, with Stop and +1:00.
  *   Its channel is silent because the service plays the alarm sound itself, on the alarm volume.
- *   It is a full-screen alarm notification, like the Clock app's: the pop-up stays on screen until
- *   acted on instead of sliding away after a few seconds, and it wakes a sleeping screen.
+ *   It is a full-screen alarm notification, like the Clock app's: with the phone asleep or locked
+ *   Android wakes the screen with [TimesUpActivity]; in use, the pop-up stays on screen until
+ *   acted on instead of sliding away after a few seconds.
  */
 object TimerNotifications {
 
@@ -88,7 +90,16 @@ object TimerNotifications {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setFullScreenIntent(openTimer(context), true)
+            .setFullScreenIntent(
+                PendingIntent.getActivity(
+                    context,
+                    1,
+                    Intent(context, TimesUpActivity::class.java)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+                ),
+                true,
+            )
             .addAction(action(context, R.drawable.ic_stop, "Stop", TimerReceiver.ACTION_RESET))
             .addAction(action(context, R.drawable.ic_timer, "+1:00", TimerReceiver.ACTION_ADD_MINUTE))
             .build()

@@ -68,6 +68,7 @@ Windows / PowerShell (primary shell here):
 Instrumented tests (`connectedDebugAndroidTest`) need a running emulator or device; don't assume one
 is attached. They are:
 - `HabitDatabaseTest` — DAO queries against an in-memory database.
+- `TimesUpActivityTest` — the "Time's up" page shown over the lock screen when a timer rings.
 - `AppFlowsTest` — end-to-end flows through the real Activity and **the real database, which it
   wipes before every test**: Home ticking/sorting, navigation, Add (validation, capitalisation,
   double tap), Remove (keep / delete stats), Edit (save, discard, double tap), Statistics (sections,
@@ -236,7 +237,10 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   It sets an exact alarm for the end (`TimerReceiver` settles it — a coroutine delay would
   stall while the phone sleeps), keeps the countdown notification in step, and starts/stops
   `TimerRingService` (foreground, `mediaPlayback`: alarm sound on the alarm volume + vibration until
-  Stop; its "Time's up" notification is a full-screen intent so the alert stays up). Manifest holds
+  Stop; its "Time's up" notification is a full-screen intent: with the phone asleep or locked
+  Android opens `ui/timer/TimesUpActivity`, which turns the screen on and shows over the lock
+  screen — only the ringing timer, never habits, in its own task — and closes once it stops
+  ringing; in use, the pop-up just stays up). Manifest holds
   the permissions for this (notifications, exact alarm, full-screen intent, foreground service,
   vibrate, wake lock). Notifications open the app via `TimerNotifications.openTimerIntent` →
   `MainActivity` → `ReevzHabitzApp(openTimerRequests)` → `timerBackStack(preset)` (the running
@@ -269,7 +273,9 @@ the clock (turn `auto_time` back on afterwards).
 A local emulator, `habitz_test` (Android 14, Pixel 7 profile), exists for verification while the
 phone is not connected. Start it with
 `emulator -avd habitz_test -no-window -gpu swiftshader_indirect`; it is slow (software GPU) and
-its System UI may show a "not responding" dialog on first boot.
+its System UI may show a "not responding" dialog on first boot. To try the lock screen, `adb shell
+locksettings set-pin 1234` — and `locksettings clear --old 1234` after: the device tests all fail
+("No compose hierarchies found") while its lock screen is showing.
 
 ## Toolchain notes (non-obvious — read before touching Gradle)
 

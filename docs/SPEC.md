@@ -81,6 +81,7 @@ A generic timer for allocating time to a task before doing it, so there is no ne
 - One timer runs at a time. Starting another while one is running or paused asks first, then replaces it.
 - It keeps running when the user leaves the app or the screen turns off, with a notification showing the countdown (Pause/Resume, `+1:00`). Tapping the notification opens that timer.
 - When time is up it rings with the phone's alarm sound and vibrates until stopped, even with the app closed or the phone locked. The 'Time's up' alert offers Stop and `+1:00`.
+- If the screen is off or the phone is locked when it rings, the screen wakes up to a full-screen 'Time's up' page over the lock screen (Stop, `+1:00`), like the Clock app. It shows only the timer and does not unlock the phone.
 
 The header shows the breadcrumb `Home > Menu > Timer`, then `> New` on the number pad or `> 25:00` on a timer's page.
 

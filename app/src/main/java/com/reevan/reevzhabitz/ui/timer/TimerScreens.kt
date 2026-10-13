@@ -218,9 +218,12 @@ fun SavedTimerScreen(duration: Long, onDeleted: () -> Unit, modifier: Modifier =
     }
 }
 
-/** The page of the timer that is going: counting down, paused, or ringing. */
+/**
+ * The page of the timer that is going: counting down, paused, or ringing. Also the whole of
+ * [TimesUpActivity], over the lock screen.
+ */
 @Composable
-private fun TimerCountdown(state: TimerState, timer: TimerController, modifier: Modifier = Modifier) {
+internal fun TimerCountdown(state: TimerState, timer: TimerController, modifier: Modifier = Modifier) {
     val now by rememberTimerNow(state, timer)
     val ringing = state is TimerState.Ringing
     val paused = state is TimerState.Paused
