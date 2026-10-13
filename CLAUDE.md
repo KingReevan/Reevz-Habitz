@@ -71,7 +71,8 @@ is attached. They are:
 - `AppFlowsTest` — end-to-end flows through the real Activity and **the real database, which it
   wipes before every test**: Home ticking/sorting, navigation, Add (validation, capitalisation,
   double tap), Remove (keep / delete stats), Edit (save, discard, double tap), Statistics (sections,
-  numbers), Settings (theme, clear deleted stats), and state surviving rotation. Emulator only.
+  numbers), Settings (theme, clear deleted stats), Timer (keypad, pause/resume, ringing, opening
+  from its notification), and state surviving rotation. Emulator only.
 
 Add a flow test here when adding or changing a user-facing flow.
 
@@ -137,7 +138,7 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
 - `ui/navigation/` — hand-rolled back stack (`Destination` sealed class, pure `push`/`pop`, saved
   as route strings). `Destination`'s companion lists must stay `by lazy` (see the comment there).
 - `ui/common/AppHeader` — `DateHeader` (Home) and `BreadcrumbHeader` (every other screen).
-- `ui/menu/MenuScreen` — the five Menu buttons, styled as a game main menu.
+- `ui/menu/MenuScreen` — the six Menu buttons, styled as a game main menu.
 - `ui/settings/SettingsScreen` — theme picker (radio rows with a swatch per theme).
 - `ui/common/HabitCard` — the shared habit card (coloured edge + white icon, name in the habit
   colour, optional description, trailing slot) and `HabitCardDivider`. Every list of habits uses it.
@@ -220,6 +221,21 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   From; earlier days red but uncounted; today/deletion day count only once ticked (streak survives
   an unticked today); after deletion grey. Opens on the current month (deletion month if deleted);
   pages from the creation month. Day numbers pick black/white by best contrast.
+- Timer (Menu > Timer, spec: Menu Screen → Timer) — Google Clock-style countdown that keeps going
+  with the app closed. **All rules are pure functions in `timer/TimerState.kt`** (states, +1:00,
+  keypad digits, display format), pinned by `TimerStateTest`; times are on the since-boot clock
+  (`SystemClock.elapsedRealtime`), never wall time. `timer/TimerController` (app-wide singleton) is
+  the only thing that changes the timer: it saves it to the `timer` SharedPreferences (cleared by a
+  reboot), sets an exact alarm for the end (`TimerReceiver` settles it — a coroutine delay would
+  stall while the phone sleeps), keeps the countdown notification in step, and starts/stops
+  `TimerRingService` (foreground, `mediaPlayback`: alarm sound on the alarm volume + vibration until
+  Stop; its "Time's up" notification is a full-screen intent so the alert stays up). Manifest holds
+  the permissions for this (notifications, exact alarm, full-screen intent, foreground service,
+  vibrate, wake lock). Notifications open the app via `TimerNotifications.openTimerIntent` →
+  `MainActivity` → `ReevzHabitzApp(openTimerRequests)` → `TimerBackStack`. The countdown ticks with
+  `withInfiniteAnimationFrameMillis` so Compose UI tests (which pause infinite animations) can idle;
+  in tests the real alarm rings the timer. `AppFlowsTest` resets the timer and grants
+  notifications before every test.
 - Testing text input on the emulator: `adb shell input text` with a whole string types faster than
   the emulator keyboard keeps up with in a word-capitalising field and drops letters. Send one
   character per `input text` call to get human-pace typing.

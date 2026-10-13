@@ -1,5 +1,6 @@
 package com.reevan.reevzhabitz
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import android.view.View
@@ -11,10 +12,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import com.reevan.reevzhabitz.timer.TimerNotifications
 import com.reevan.reevzhabitz.ui.ReevzHabitzApp
 import com.reevan.reevzhabitz.ui.settings.PreferencesViewModel
 import com.reevan.reevzhabitz.ui.theme.ReevzHabitzTheme
@@ -29,10 +33,15 @@ class MainActivity : ComponentActivity() {
     // Same instance Settings gets from viewModel(), so a theme change applies immediately.
     private val preferences: PreferencesViewModel by viewModels { PreferencesViewModel.Factory }
 
+    // Goes up each time a timer notification is tapped; the app shell then opens the Timer.
+    private var openTimerRequests by mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         holdFirstFrameUntilSettingsLoad()
+        // Only a fresh launch: a recreated Activity (rotation) still carries the old intent.
+        if (savedInstanceState == null && intent.opensTimer()) openTimerRequests++
 
         // Restarted on every return to the foreground, so "today" is re-read after the phone has
         // slept through midnight, then kept ticking while the app stays on screen. A clock, time
@@ -60,10 +69,17 @@ class MainActivity : ComponentActivity() {
             }
 
             ReevzHabitzTheme(themeMode = themeMode) {
-                ReevzHabitzApp()
+                ReevzHabitzApp(openTimerRequests = openTimerRequests)
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        if (intent.opensTimer()) openTimerRequests++
+    }
+
+    private fun Intent.opensTimer() = getBooleanExtra(TimerNotifications.EXTRA_OPEN_TIMER, false)
 
     /**
      * Keeps the system splash screen up until the stored theme has been read — a single-row

@@ -2,9 +2,11 @@
 
 ## Material Symbols
 
-The habit icons (`app/src/main/res/drawable/habit_*.xml`) and the navigation icons
-(`ic_arrow_back.xml`) are Google's [Material Symbols](https://github.com/google/material-design-icons),
-Rounded style, fetched by `tools/fetch_habit_icons.py`.
+The habit icons (`app/src/main/res/drawable/habit_*.xml`), the navigation icons
+(`ic_arrow_back.xml`) and the Timer's icons (`ic_timer`, `ic_play`, `ic_pause`, `ic_stop`,
+`ic_backspace`) are Google's [Material Symbols](https://github.com/google/material-design-icons),
+Rounded style. The habit icons are fetched by `tools/fetch_habit_icons.py`; the others were
+fetched once by hand from the same source.
 
 Licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0).
 Modification: the `android:tint` attribute is removed from each file so Compose can tint the icons.

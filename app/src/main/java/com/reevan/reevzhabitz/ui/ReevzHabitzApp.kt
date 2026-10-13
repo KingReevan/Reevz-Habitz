@@ -9,6 +9,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -31,6 +32,7 @@ import com.reevan.reevzhabitz.ui.home.SortButton
 import com.reevan.reevzhabitz.ui.menu.MenuScreen
 import com.reevan.reevzhabitz.ui.navigation.BackStackSaver
 import com.reevan.reevzhabitz.ui.navigation.Destination
+import com.reevan.reevzhabitz.ui.navigation.TimerBackStack
 import com.reevan.reevzhabitz.ui.navigation.InitialBackStack
 import com.reevan.reevzhabitz.ui.navigation.LeaveGuard
 import com.reevan.reevzhabitz.ui.navigation.breadcrumbs
@@ -42,6 +44,7 @@ import com.reevan.reevzhabitz.ui.removehabit.RemoveHabitScreen
 import com.reevan.reevzhabitz.ui.settings.SettingsScreen
 import com.reevan.reevzhabitz.ui.statistics.HabitStatisticsScreen
 import com.reevan.reevzhabitz.ui.statistics.StatisticsListScreen
+import com.reevan.reevzhabitz.ui.timer.TimerScreen
 import com.reevan.reevzhabitz.util.TodayClock
 import com.reevan.reevzhabitz.util.formatHeaderDate
 
@@ -51,9 +54,12 @@ import com.reevan.reevzhabitz.util.formatHeaderDate
  *
  * Home gets the date header; every other screen gets a back arrow and a breadcrumb whose earlier
  * crumbs jump straight back. System back pops one screen; from Home it leaves the app as usual.
+ *
+ * [openTimerRequests] goes up each time a timer notification is tapped; the Timer then opens, as
+ * Home > Menu > Timer.
  */
 @Composable
-fun ReevzHabitzApp() {
+fun ReevzHabitzApp(openTimerRequests: Int = 0) {
     var backStack by rememberSaveable(stateSaver = BackStackSaver) {
         mutableStateOf(InitialBackStack)
     }
@@ -83,6 +89,11 @@ fun ReevzHabitzApp() {
     }
 
     BackHandler(enabled = backStack.size > 1) { leaveTo(backStack.pop()) }
+
+    // Through leaveTo, so an Edit Habit editor with unsaved changes still asks first.
+    LaunchedEffect(openTimerRequests) {
+        if (openTimerRequests > 0 && current != Destination.Timer) leaveTo(TimerBackStack)
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -148,6 +159,7 @@ fun ReevzHabitzApp() {
                     HabitStatisticsScreen(habitId = current.habitId, onGone = finish(current))
                 }
                 Destination.Settings -> SettingsScreen()
+                Destination.Timer -> TimerScreen()
             }
         }
     }

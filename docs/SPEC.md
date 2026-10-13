@@ -59,15 +59,27 @@ After the star appears, a green card stays pinned at the bottom of the screen th
 ---
 ## Menu Screen
 
-The user will arrive at the menu screen when they click on the Menu icon on the header of the Home screen. The Menu screen looks like the Main Menu page of a video game. It will show Five buttons on the screen. All arranged like a stack. This time the stack will have gaps between the buttons. These are the five buttons:
+The user will arrive at the menu screen when they click on the Menu icon on the header of the Home screen. The Menu screen looks like the Main Menu page of a video game. It will show six buttons on the screen. All arranged like a stack. This time the stack will have gaps between the buttons. These are the six buttons:
 
 1. `Add Habit`
 2. `Remove Habit`
 3. `Edit Habit`
 4. `Statistics`
 5. `Settings`
+6. `Timer`
 
 The header of the menu screen will just have a arrow on the left most side that when clicked will return the user back to the Home screen. Put breadcrumb next to the arrow so that user knows where they have navigated (it will look like `Home > Menu`).
+
+### Timer
+
+A generic timer for allocating time to a task before doing it, so there is no need to switch to the Clock app. It looks and works like the timer in Google's Clock app:
+
+- Set the time on a number pad (`1`–`9`, `00`, `0`, backspace). Digits fill `00h 00m 00s` from the right, so typing 5, 3, 0 reads `00h 05m 30s`. A play button appears once a time is typed.
+- Running, a ring counts down around the time left, with pause/resume, `+1:00` and Reset.
+- It keeps running when the user leaves the app or the screen turns off, with a notification showing the countdown (Pause/Resume, `+1:00`). Tapping the notification opens the Timer.
+- When time is up it rings with the phone's alarm sound and vibrates until stopped, even with the app closed or the phone locked. The 'Time's up' alert offers Stop and `+1:00`.
+
+The header shows the breadcrumb `Home > Menu > Timer`.
 
 ---
 ## Add Habit Screen

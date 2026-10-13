@@ -3,6 +3,24 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <!--
+        The Timer (Menu > Timer) keeps counting with the app closed and rings when time is up,
+        like the Clock app: an exact alarm wakes the phone at the end time, and a foreground
+        service plays the alarm sound and vibrates until stopped. USE_EXACT_ALARM is granted at
+        install on Android 13+; SCHEDULE_EXACT_ALARM covers Android 12, where it is pre-granted.
+        USE_FULL_SCREEN_INTENT keeps the "Time's up" pop-up on screen until it is stopped.
+    -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission
+        android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!--
         No backups, by the owner's choice: habit data never leaves the phone. allowBackup="false"
         stops Google Drive backup; on Android 12+ it does not stop device-to-device transfer when
         setting up a new phone, so data_extraction_rules excludes everything from both.
@@ -27,6 +45,15 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".timer.TimerRingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
+        <receiver
+            android:name=".timer.TimerReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

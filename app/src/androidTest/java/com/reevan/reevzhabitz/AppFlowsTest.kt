@@ -1,6 +1,8 @@
 package com.reevan.reevzhabitz
 
+import android.Manifest
 import android.content.Context
+import android.os.Build
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -31,11 +33,17 @@ import androidx.compose.ui.test.click
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
 import com.reevan.reevzhabitz.data.Completion
 import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDatabase
 import com.reevan.reevzhabitz.data.HomeSort
 import com.reevan.reevzhabitz.data.ThemeMode
+import com.reevan.reevzhabitz.timer.ONE_MINUTE
+import com.reevan.reevzhabitz.timer.TimerController
+import com.reevan.reevzhabitz.timer.TimerNotifications
+import com.reevan.reevzhabitz.timer.TimerState
+import com.reevan.reevzhabitz.timer.formatTimer
 import com.reevan.reevzhabitz.ui.common.BREADCRUMBS_TAG
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -62,10 +70,25 @@ class AppFlowsTest {
     private val db = HabitDatabase.getInstance(context)
     private val today: LocalDate = LocalDate.now()
 
-    /** Runs before the Activity starts, so every test opens on an empty app. */
+    private val timer = TimerController.get(context)
+
+    /**
+     * Runs before the Activity starts, so every test opens on an empty app with no timer going.
+     * Notifications are allowed up front: the permission prompt on the first timer Start would
+     * otherwise cover the app.
+     */
     @get:Rule(order = 0)
     val emptyDatabase = object : ExternalResource() {
-        override fun before() = db.clearAllTables()
+        override fun before() {
+            db.clearAllTables()
+            timer.reset()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(
+                    context.packageName,
+                    Manifest.permission.POST_NOTIFICATIONS,
+                )
+            }
+        }
     }
 
     @get:Rule(order = 1)
@@ -715,6 +738,66 @@ class AppFlowsTest {
     }
 
     // ---- Settings --------------------------------------------------------------------------
+
+    @Test
+    fun timer_typeStartPauseResumeReset() {
+        openFromMenu("TIMER")
+        waitForCrumbs("Home", "Menu", "Timer")
+        rule.onNodeWithContentDescription("Start").assertDoesNotExist()
+
+        // Digits fill hh mm ss from the right, like the Clock app.
+        listOf("1", "3", "0").forEach { rule.onNodeWithText(it).performClick() }
+        rule.onNodeWithText("00h 01m 30s").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Delete").performClick()
+        rule.onNodeWithText("00h 00m 13s").assertIsDisplayed()
+        rule.onNodeWithText("0").performClick()
+
+        rule.onNodeWithContentDescription("Start").performClick()
+        waitFor { timer.state.value is TimerState.Running }
+        rule.onNodeWithContentDescription("Pause").performClick()
+        waitFor { timer.state.value is TimerState.Paused }
+        val left = (timer.state.value as TimerState.Paused).left
+        assertTrue("Paused partway: $left", left in 80_000..90_000)
+        waitForText(formatTimer(left))
+
+        rule.onNodeWithContentDescription("Resume").performClick()
+        waitFor { timer.state.value is TimerState.Running }
+        rule.onNodeWithText("Reset").performClick()
+        waitFor { timer.state.value == TimerState.Idle }
+        // Back on the keypad with the same time, ready to run again.
+        waitForText("00h 01m 30s")
+    }
+
+    @Test
+    fun timer_ringsWhenTimeIsUp_plusMinuteRunsOn_stopSilences() {
+        openFromMenu("TIMER")
+        rule.onNodeWithText("2").performClick()
+        rule.onNodeWithContentDescription("Start").performClick()
+
+        // The alarm settles it, as it would with the app closed.
+        waitForText("Time's up", timeoutMillis = 20_000)
+        assertTrue(timer.state.value is TimerState.Ringing)
+        rule.onNodeWithContentDescription("Add one minute").performClick()
+        waitFor { timer.state.value is TimerState.Running }
+        val running = timer.state.value as TimerState.Running
+        assertEquals(ONE_MINUTE, running.total)
+        rule.onNodeWithText("Time's up").assertDoesNotExist()
+
+        rule.onNodeWithText("Reset").performClick()
+        waitFor { timer.state.value == TimerState.Idle }
+        rule.onNodeWithContentDescription("Start").performClick()
+        waitForText("Time's up", timeoutMillis = 20_000)
+        rule.onNodeWithContentDescription("Stop").performClick()
+        waitFor { timer.state.value == TimerState.Idle }
+        waitForText("00h 00m 02s")
+    }
+
+    @Test
+    fun tappingATimerNotification_opensTheTimer() {
+        waitForText("No habits for today.\nAdd one from the menu.")
+        context.startActivity(TimerNotifications.openTimerIntent(context))
+        waitForCrumbs("Home", "Menu", "Timer")
+    }
 
     @Test
     fun settings_themeIsSaved() {

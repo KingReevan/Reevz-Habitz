@@ -1,7 +1,7 @@
 package com.reevan.reevzhabitz.ui.navigation
 
 /**
- * Every screen in the app. [label] is the screen's breadcrumb, and for the five Menu screens also
+ * Every screen in the app. [label] is the screen's breadcrumb, and for the six Menu screens also
  * its Menu button text.
  *
  * [route] is a string form used only to save the back stack across process death; [fromRoute]
@@ -15,6 +15,7 @@ sealed class Destination(val label: String, val route: String) {
     data object EditHabitList : Destination("Edit Habit", "edit")
     data object StatisticsList : Destination("Statistics", "stats")
     data object Settings : Destination("Settings", "settings")
+    data object Timer : Destination("Timer", "timer")
 
     // The per-habit screens have short generic crumbs, by the owner's choice; the screens
     // themselves show which habit they are about.
@@ -26,11 +27,11 @@ sealed class Destination(val label: String, val route: String) {
     companion object {
         /** The Menu screen's buttons, top to bottom. */
         val menuEntries: List<Destination> by lazy {
-            listOf(AddHabit, RemoveHabit, EditHabitList, StatisticsList, Settings)
+            listOf(AddHabit, RemoveHabit, EditHabitList, StatisticsList, Settings, Timer)
         }
 
         private val fixed: List<Destination> by lazy {
-            listOf(Home, Menu, AddHabit, RemoveHabit, EditHabitList, StatisticsList, Settings)
+            listOf(Home, Menu, AddHabit, RemoveHabit, EditHabitList, StatisticsList, Settings, Timer)
         }
 
         fun fromRoute(route: String): Destination {

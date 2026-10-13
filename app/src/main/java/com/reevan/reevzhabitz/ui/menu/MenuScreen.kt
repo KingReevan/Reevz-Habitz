@@ -28,7 +28,7 @@ import com.reevan.reevzhabitz.ui.navigation.Destination
 import com.reevan.reevzhabitz.ui.theme.ReevzHabitzTheme
 
 /**
- * A video game's main menu: the five sections as a centred stack of wide, squared-off buttons
+ * A video game's main menu: the six sections as a centred stack of wide, squared-off buttons
  * with gaps between them, each outlined in the theme's accent with widely spaced capitals.
  */
 @Composable

@@ -14,6 +14,10 @@ import androidx.compose.runtime.saveable.listSaver
 
 val InitialBackStack: List<Destination> = listOf(Destination.Home)
 
+/** Where a tapped timer notification lands. */
+val TimerBackStack: List<Destination> =
+    listOf(Destination.Home, Destination.Menu, Destination.Timer)
+
 /**
  * Opens [destination] on top. Opening the screen that is already on top does nothing, so two taps
  * landing before the new screen appears can't stack it twice (`... > Add Habit > Add Habit`).
