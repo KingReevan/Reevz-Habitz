@@ -724,16 +724,40 @@ class AppFlowsTest {
         assertEquals(today.minusDays(20), saved.startDate)
     }
 
+    /** A one-line description and one that wraps to two lines, to compare card heights. */
+    private fun insertShortAndLong(): List<Long> = insert(
+        habit("Short").copy(description = "Brief."),
+        habit("Long").copy(
+            description = "Read at least twenty pages of a good book every single night " +
+                "before going to sleep, without the phone.",
+        ),
+    )
+
+    @Test
+    fun editHabit_everyCardIsAsTallAsTheTallest() {
+        insertShortAndLong()
+        openFromMenu("EDIT HABIT")
+        waitForText("Long")
+        // The merged (tappable) card node carries its name, so its bounds are the whole card.
+        fun height(name: String) = rule.onNodeWithText(name).fetchSemanticsNode().boundsInRoot.height
+        assertEquals(height("Long"), height("Short"), 0.5f)
+    }
+
+    @Test
+    fun removeHabit_everyCardIsAsTallAsTheTallest() {
+        insertShortAndLong()
+        openFromMenu("REMOVE HABIT")
+        waitForText("Long")
+        // The tick section runs the card's full height and carries the habit's name.
+        fun height(name: String) =
+            rule.onNodeWithContentDescription(name).fetchSemanticsNode().boundsInRoot.height
+        assertEquals(height("Long"), height("Short"), 0.5f)
+    }
+
     @Test
     fun statistics_everyCardIsAsTallAsTheTallest() {
-        val (_, _, gone) = insert(
-            habit("Short").copy(description = "Brief."),
-            habit("Long").copy(
-                description = "Read at least twenty pages of a good book every single night " +
-                    "before going to sleep, without the phone.",
-            ),
-            habit("Gone").copy(description = "Old."),
-        )
+        insertShortAndLong()
+        val (gone) = insert(habit("Gone").copy(description = "Old."))
         runBlocking { db.habitDao().remove(listOf(gone), keepStats = true, today = today) }
         openFromMenu("STATISTICS")
         waitForText("Deleted")

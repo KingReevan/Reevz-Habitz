@@ -8,8 +8,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
@@ -23,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -38,6 +37,8 @@ import com.reevan.reevzhabitz.ui.common.HabitCard
 import com.reevan.reevzhabitz.ui.common.HabitCheckSection
 import com.reevan.reevzhabitz.ui.common.rememberSubmission
 import com.reevan.reevzhabitz.ui.common.HabitCardDivider
+import com.reevan.reevzhabitz.ui.common.SameHeightCards
+import com.reevan.reevzhabitz.ui.common.sameHeightCard
 import com.reevan.reevzhabitz.ui.theme.HabitColors
 import com.reevan.reevzhabitz.ui.theme.HabitIcons
 import com.reevan.reevzhabitz.ui.theme.current
@@ -84,18 +85,25 @@ fun RemoveHabitScreen(
     val selected = all.filter { it.id in selectedIds }
 
     Column(modifier.fillMaxSize()) {
-        LazyColumn(Modifier.weight(1f)) {
-            items(all, key = { it.id }) { habit ->
-                val isSelected = habit.id in selectedIds
-                SelectableHabitCard(
-                    habit = habit,
-                    selected = isSelected,
-                    onToggle = {
-                        selectedIds =
-                            if (isSelected) selectedIds - habit.id else selectedIds + habit.id
-                    },
-                )
-                HabitCardDivider()
+        // Every card as tall as the tallest, so one- and two-line descriptions look alike.
+        SameHeightCards(
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            all.forEach { habit ->
+                key(habit.id) {
+                    val isSelected = habit.id in selectedIds
+                    SelectableHabitCard(
+                        habit = habit,
+                        selected = isSelected,
+                        onToggle = {
+                            selectedIds =
+                                if (isSelected) selectedIds - habit.id else selectedIds + habit.id
+                        },
+                    )
+                    HabitCardDivider()
+                }
             }
         }
 
@@ -153,6 +161,7 @@ private fun SelectableHabitCard(
         color = color,
         icon = HabitIcons.forKey(habit.iconKey),
         description = habit.description,
+        modifier = Modifier.sameHeightCard(),
         trailing = {
             HabitCheckSection(
                 checked = selected,

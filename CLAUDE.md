@@ -143,6 +143,10 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
 - `ui/settings/SettingsScreen` — theme picker (radio rows with a swatch per theme).
 - `ui/common/HabitCard` — the shared habit card (coloured edge + white icon, name in the habit
   colour, optional description, trailing slot) and `HabitCardDivider`. Every list of habits uses it.
+- `ui/common/SameHeightCards` — the Statistics, Edit Habit and Remove Habit lists make every card
+  (marked `Modifier.sameHeightCard()`) as tall as the tallest, so one- and two-line descriptions
+  look alike. Not lazy — it needs the tallest card before placing any; scroll it with
+  `verticalScroll`. Home has no descriptions and stays a `LazyColumn`.
 - `ui/theme/` — four fixed themes (Light, Dark, VS Code Dark, Tokyo Night; default Dark), dynamic
   colour off. Material roles via `MaterialTheme.colorScheme`; app-only colours (card divider,
   Statistics done/missed/future/today ring) via `HabitzTheme.colors`. `HabitColors` (35) and
@@ -215,8 +219,7 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   buttons (`BreadcrumbHeader`, tagged `breadcrumbs` for tests); `popTo(index)` jumps to them.
 - `ui/habitform/HabitFormLayout` — `HabitFormScaffold` (scrolling form + fixed bottom-right action)
   and `HabitDetailsFields` (name, description, colour, icon), shared by Add and Edit.
-- `ui/statistics/` — Statistics list (started active habits, then a "Deleted" section; every card
-  as tall as the tallest, via `SameHeightCards` — not lazy, it needs the tallest first) → one
+- `ui/statistics/` — Statistics list (started active habits, then a "Deleted" section) → one
   habit's screen: a collapsible strip (name; X/Y, current and longest streak) over a month calendar.
   **All rules live in the pure `HabitHistory`** (day colours, numbers, paging range) and are pinned
   by `HabitHistoryTest` — change rules there, not in the UI. In short: due every day from Start
