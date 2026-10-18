@@ -215,7 +215,8 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   buttons (`BreadcrumbHeader`, tagged `breadcrumbs` for tests); `popTo(index)` jumps to them.
 - `ui/habitform/HabitFormLayout` — `HabitFormScaffold` (scrolling form + fixed bottom-right action)
   and `HabitDetailsFields` (name, description, colour, icon), shared by Add and Edit.
-- `ui/statistics/` — Statistics list (started active habits, then a "Deleted" section) → one
+- `ui/statistics/` — Statistics list (started active habits, then a "Deleted" section; every card
+  as tall as the tallest, via `SameHeightCards` — not lazy, it needs the tallest first) → one
   habit's screen: a collapsible strip (name; X/Y, current and longest streak) over a month calendar.
   **All rules live in the pure `HabitHistory`** (day colours, numbers, paging range) and are pinned
   by `HabitHistoryTest` — change rules there, not in the UI. In short: due every day from Start

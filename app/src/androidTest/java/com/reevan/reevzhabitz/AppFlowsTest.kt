@@ -725,6 +725,27 @@ class AppFlowsTest {
     }
 
     @Test
+    fun statistics_everyCardIsAsTallAsTheTallest() {
+        val (_, _, gone) = insert(
+            habit("Short").copy(description = "Brief."),
+            habit("Long").copy(
+                description = "Read at least twenty pages of a good book every single night " +
+                    "before going to sleep, without the phone.",
+            ),
+            habit("Gone").copy(description = "Old."),
+        )
+        runBlocking { db.habitDao().remove(listOf(gone), keepStats = true, today = today) }
+        openFromMenu("STATISTICS")
+        waitForText("Deleted")
+
+        // The merged card node carries its name, so its bounds are the whole card.
+        fun height(name: String) = rule.onNodeWithText(name).fetchSemanticsNode().boundsInRoot.height
+        val tallest = height("Long")
+        assertEquals(tallest, height("Short"), 0.5f)
+        assertEquals(tallest, height("Gone"), 0.5f)
+    }
+
+    @Test
     fun statistics_monthShownSurvivesRotation() {
         insert(habit("Paged", start = today.minusMonths(2).withDayOfMonth(1)))
         openFromMenu("STATISTICS")
