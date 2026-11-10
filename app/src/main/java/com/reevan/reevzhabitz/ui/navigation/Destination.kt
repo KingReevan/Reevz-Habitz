@@ -38,7 +38,7 @@ sealed class Destination(val label: String, val route: String) {
     companion object {
         /** The Menu screen's buttons, top to bottom. */
         val menuEntries: List<Destination> by lazy {
-            listOf(AddHabit, RemoveHabit, EditHabitList, StatisticsList, Settings, Timer, HabitOrder)
+            listOf(AddHabit, RemoveHabit, EditHabitList, HabitOrder, StatisticsList, Settings, Timer)
         }
 
         private val fixed: List<Destination> by lazy {

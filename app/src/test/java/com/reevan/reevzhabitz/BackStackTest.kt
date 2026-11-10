@@ -114,8 +114,8 @@ class BackStackTest {
     fun menuEntries_areTheSevenSectionsInSpecOrder() {
         assertEquals(
             listOf(
-                "Add Habit", "Remove Habit", "Edit Habit", "Statistics", "Settings", "Timer",
-                "Habit Order",
+                "Add Habit", "Remove Habit", "Edit Habit", "Habit Order", "Statistics", "Settings",
+                "Timer",
             ),
             Destination.menuEntries.map { it.label },
         )

@@ -66,10 +66,10 @@ The user will arrive at the menu screen when they click on the Menu icon on the 
 1. `Add Habit`
 2. `Remove Habit`
 3. `Edit Habit`
-4. `Statistics`
-5. `Settings`
-6. `Timer`
-7. `Habit Order`
+4. `Habit Order`
+5. `Statistics`
+6. `Settings`
+7. `Timer`
 
 The header of the menu screen will just have a arrow on the left most side that when clicked will return the user back to the Home screen. Put breadcrumb next to the arrow so that user knows where they have navigated (it will look like `Home > Menu`).
 

@@ -207,7 +207,7 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   (`app_settings.homeSort`, `ui/common/HabitOrder` — shared comparator), multi-select by checkbox, confirm dialog with
   "Keep stats" (on by default). `HabitDao.remove` soft-deletes (`deletedOn = today`) or hard-deletes
   (completions cascade). Returns to Menu.
-- `ui/habitorder/` — Habit Order (Menu, 7th button; spec: Menu Screen → Habit Order): every
+- `ui/habitorder/` — Habit Order (Menu, right after Edit Habit; spec: Menu Screen → Habit Order): every
   active habit with its description, numbered on the right in Home's order. Long-press and drag a
   card (with auto-scroll at the edges); TalkBack gets "Move up" / "Move down" actions, which the
   tests use too. Save (`HabitDao.setHomeOrder`, places 0, 1, 2… — touches nothing else) returns to
