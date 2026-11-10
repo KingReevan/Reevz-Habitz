@@ -28,10 +28,14 @@ interface HabitDao {
     suspend fun getById(id: Long): Habit?
 
     /**
-     * Home's list: every active habit that has started by [date], each with whether it was done
-     * that day. Every habit is due every day once started, so there is no schedule to check.
-     * Room re-emits whenever `habits` or `completions` changes, so ticking updates Home at once.
+     * Home's list: every active habit that has started by [date] and is due on its weekday, each
+     * with whether it was done that day. Room re-emits whenever `habits` or `completions` changes,
+     * so ticking updates Home at once.
      */
+    fun observeDueOn(date: LocalDate): Flow<List<HabitOnDay>> =
+        observeDueOn(date, weekdayBit = Weekdays.bit(date.dayOfWeek))
+
+    /** [observeDueOn] with [date]'s weekday as its bit in `habits.days` (see [Weekdays]). */
     @Query(
         """
         SELECT habits.*,
@@ -40,10 +44,10 @@ interface HabitDao {
                 WHERE completions.habitId = habits.id AND completions.date = :date
             ) AS done
         FROM habits
-        WHERE deletedOn IS NULL AND startDate <= :date
+        WHERE deletedOn IS NULL AND startDate <= :date AND (days & :weekdayBit) != 0
         """,
     )
-    fun observeDueOn(date: LocalDate): Flow<List<HabitOnDay>>
+    fun observeDueOn(date: LocalDate, weekdayBit: Int): Flow<List<HabitOnDay>>
 
     /** Habits not removed, including ones whose start date is still in the future. */
     @Query("SELECT * FROM habits WHERE deletedOn IS NULL")

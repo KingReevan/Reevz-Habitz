@@ -99,6 +99,14 @@ The screen will look like a form with just Five inputs to be taken from the user
 
 At the bottom right of this screen will be a button labelled 'Create.' When it is clicked, the habit will get created and will be shown in the Home screen on the 'Start From' date (It is like scheduling). After clicking on the 'Create' button, the user will be redirected to the Menu screen. If they want to create another habit, they must click on the `Add Habit` button and repeat the process.
 
+### Advanced options
+
+Some habits only occur on certain days of the week (like only Monday, or Tuesday and Friday). While adding a habit, a small advanced options icon sits at the bottom left of the screen, beside 'Create'. Clicking it opens a new page (`Home > Menu > Add Habit > Advanced`); the back button returns to the Add Habit page exactly as it was left, mid-creation. This page holds customisations of individual habits that most habits never need, so future ones go here too without cluttering the form.
+
+- **Repeat on**: seven day circles, one per day of the week. By default every day is on, so the habit appears every single day. Turning days off makes the habit appear on Home only on the days left on. At least one day is needed. When not every day is on, the chosen days show next to the icon (e.g. 'Tue, Fri').
+- The days are chosen when the habit is created and can't be changed later in Edit Habit, so its statistics never shift.
+- In Statistics, the days a habit isn't set to appear on are grey circles (like future days) and count for nothing: they aren't in X/Y and don't break a streak.
+
 ---
 ## Remove Habit
 

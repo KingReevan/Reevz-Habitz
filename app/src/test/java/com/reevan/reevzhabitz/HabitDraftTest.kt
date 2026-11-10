@@ -13,6 +13,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.Locale
 import java.util.TimeZone
@@ -37,6 +38,14 @@ class HabitDraftTest {
         assertFalse(complete.copy(name = "   ").isComplete)
         assertFalse(complete.copy(colorKey = null).isComplete)
         assertFalse(complete.copy(iconKey = null).isComplete)
+        assertFalse(complete.copy(days = emptySet()).isComplete)
+    }
+
+    @Test
+    fun days_defaultToEveryDay_andAPickedSetIsKept() {
+        assertEquals(DayOfWeek.entries.toSet(), complete.toHabit(today, 0).days)
+        val picked = setOf(DayOfWeek.TUESDAY, DayOfWeek.FRIDAY)
+        assertEquals(picked, complete.copy(days = picked).toHabit(today, 0).days)
     }
 
     @Test

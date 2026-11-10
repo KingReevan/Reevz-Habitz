@@ -68,6 +68,9 @@ Windows / PowerShell (primary shell here):
 Instrumented tests (`connectedDebugAndroidTest`) need a running emulator or device; don't assume one
 is attached. They are:
 - `HabitDatabaseTest` — DAO queries against an in-memory database.
+- `MigrationTest` — builds a v1 database file (SQL copied from `1.json`) and opens it through
+  the app's real migrations, checking every habit, tick and setting survives. Extend it with each
+  new schema version.
 - `TimesUpActivityTest` — the "Time's up" page shown over the lock screen when a timer rings.
 - `AppFlowsTest` — end-to-end flows through the real Activity and **the real database, which it
   wipes before every test**: Home ticking/sorting, navigation, Add (validation, capitalisation,
@@ -129,9 +132,10 @@ Add a flow test here when adding or changing a user-facing flow.
 All eight phases of `docs/PLAN.md` are done: every screen in `docs/SPEC.md` is built and on the phone. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
 Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00050146M001006`; `minSdk 26` / `targetSdk 37`.
 
-- `data/` — Room schema v1: `habits` (soft delete via `deletedOn`), `completions` (one row per
-  habit per day done, cascades on hard delete), `app_settings` (theme). Dates are `LocalDate`
-  stored as epoch days (`Converters`). DAOs hold only basic reads/writes; screen-specific queries
+- `data/` — Room schema v2: `habits` (soft delete via `deletedOn`; `days` = the weekdays it is
+  due on, a 7-bit mask via `data/Weekdays`, Monday = 1 … Sunday = 64, default 127 = every day),
+  `completions` (one row per habit per day done, cascades on hard delete), `app_settings`
+  (theme). Dates are `LocalDate` stored as epoch days (`Converters`). DAOs hold only basic reads/writes; screen-specific queries
   are added by the phase that needs them.
 - `util/TodayClock` — the single source of "today". Ticks at local midnight; MainActivity restarts
   it on every return to the foreground. Never call `LocalDate.now()` elsewhere — read
@@ -167,13 +171,21 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   `rememberTextFieldState`), not the ViewModel: ViewModels are activity-scoped under the
   hand-rolled back stack, so per-visit state kept in one would reappear on the next visit.
   `AddHabitViewModel` only inserts. Create pops back to Menu.
+- Add Habit's **Advanced options** (`ui/addhabit/AdvancedOptions`): the tune icon at the bottom
+  left of the form's bar opens `Destination.AddHabitOptions` (crumb "Advanced") — the place for
+  per-habit settings most habits never need. Today it holds the weekdays (seven day circles in the
+  phone's week order, `ui/common/firstDayOfWeek`; at least one needed). Once picked, the days
+  show beside the icon. The shell renders AddHabit and AddHabitOptions from **one** `when`
+  branch, so the form's saved state (and scroll) lives on while the options page shows; keep
+  them in one branch. Days are set at creation only — Edit can't change them, so stats never
+  shift.
 - `ui/habitform/` — form pieces shared with Phase 6's editor: `HabitNameField`, description field,
   `HabitColorPicker`, `HabitIconPicker`, and `HabitDraft` (validation + `toHabit`).
 - **Habit name capitalisation is display-only** (`OutputTransformation`); `HabitDraft.toHabit`
   applies `capitalizeWords` when saving. Don't move it back into onValueChange or an
   InputTransformation — rewriting text the keyboard is composing desyncs it.
-- `ui/home/` — Home: today's habits via `HabitDao.observeDueOn(today)` (active, started, with a
-  `done` flag for that day), ordered by `orderForHome` (to-do first, done last, each group in the
+- `ui/home/` — Home: today's habits via `HabitDao.observeDueOn(today)` (active, started, due on
+  today's weekday, with a `done` flag for that day), ordered by `orderForHome` (to-do first, done last, each group in the
   chosen `HomeSort`; "newest" = most recently *created*). Only the checkbox ticks; unticking asks
   first. A ticked habit is struck through and its edge, name and checkbox fade to the theme's
   `HabitzTheme.colors.doneHabit` grey (contrast pinned by `ThemeColorsTest`). The sort is remembered in `app_settings.homeSort`; the header icon shows the current one.
@@ -222,8 +234,9 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
 - `ui/statistics/` — Statistics list (started active habits, then a "Deleted" section) → one
   habit's screen: a collapsible strip (name; X/Y, current and longest streak) over a month calendar.
   **All rules live in the pure `HabitHistory`** (day colours, numbers, paging range) and are pinned
-  by `HabitHistoryTest` — change rules there, not in the UI. In short: due every day from Start
-  From; earlier days red but uncounted; today/deletion day count only once ticked (streak survives
+  by `HabitHistoryTest` — change rules there, not in the UI. In short: due on its weekdays from
+  Start From (other weekdays grey, `NOT_SCHEDULED`, counting for nothing and never breaking a
+  streak); earlier due days red but uncounted; today/deletion day count only once ticked (streak survives
   an unticked today); after deletion grey. Opens on the current month (deletion month if deleted);
   pages from the creation month. Day numbers pick black/white by best contrast.
 - Timer (Menu > Timer, spec: Menu Screen → Timer) — Google Clock-style. Saved timers are cards
@@ -264,6 +277,7 @@ Generated assets — edit the script, not the output:
 
 **Schema v1 has been on the phone since 2026-10-03 and is frozen.** Every schema change from now
 on is a version bump plus a migration (`@AutoMigration` where additive). Never edit v1 in place.
+v2 (`habits.days`, auto-migrated) went onto the phone on 2026-11-10; it is frozen the same way.
 Before any `connectedAndroidTest` on the phone, back up its database (see Data guidelines) — the
 test run uninstalls the app and deletes it. Run instrumented tests on the emulator only: **when
 the phone is plugged in, set `ANDROID_SERIAL=emulator-5554` first**, or Gradle runs them on every

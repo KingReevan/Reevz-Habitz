@@ -1,14 +1,18 @@
 package com.reevan.reevzhabitz.ui.habitform
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.input.TextFieldState
 import androidx.compose.foundation.verticalScroll
@@ -17,6 +21,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.reevan.reevzhabitz.ui.theme.HabitColors
@@ -25,6 +30,9 @@ import com.reevan.reevzhabitz.ui.theme.HabitIcons
 /**
  * The layout Add Habit and the Edit Habit editor share: a scrolling form above a fixed bar with
  * the one action at the bottom right — in thumb reach, and riding up above the keyboard.
+ *
+ * [barStart] goes at the bar's left end (Add Habit's Advanced options button). Pass a
+ * [scrollState] remembered above this to keep the form's scroll position while it is off screen.
  */
 @Composable
 fun HabitFormScaffold(
@@ -32,6 +40,8 @@ fun HabitFormScaffold(
     actionEnabled: Boolean,
     onAction: () -> Unit,
     modifier: Modifier = Modifier,
+    scrollState: ScrollState = rememberScrollState(),
+    barStart: @Composable () -> Unit = {},
     form: @Composable ColumnScope.() -> Unit,
 ) {
     Column(modifier.fillMaxSize().imePadding()) {
@@ -39,17 +49,21 @@ fun HabitFormScaffold(
             verticalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier
                 .weight(1f)
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
                 .padding(16.dp),
             content = form,
         )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Row(
-            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 12.dp),
         ) {
+            // Takes the room the action leaves, so a long label there shortens instead of
+            // pushing the action off the bar.
+            Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) { barStart() }
+            Spacer(Modifier.width(8.dp))
             Button(
                 onClick = onAction,
                 enabled = actionEnabled,

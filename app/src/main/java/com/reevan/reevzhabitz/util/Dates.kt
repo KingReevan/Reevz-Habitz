@@ -1,11 +1,13 @@
 package com.reevan.reevzhabitz.util
 
+import java.time.DayOfWeek
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
 /** The Home header's date, e.g. "03 October". */
@@ -39,3 +41,23 @@ fun LocalDate.toDatePickerMillis(): Long =
 
 fun datePickerMillisToLocalDate(utcMillis: Long): LocalDate =
     Instant.ofEpochMilli(utcMillis).atZone(ZoneOffset.UTC).toLocalDate()
+
+/** The seven days of the week in order, starting on [firstDayOfWeek] (the phone's, as a rule). */
+fun weekStartingOn(firstDayOfWeek: DayOfWeek): List<DayOfWeek> =
+    (0L until 7L).map(firstDayOfWeek::plus)
+
+/**
+ * A habit's weekdays in words, in week order from [firstDayOfWeek]: "Every day", "No days", or
+ * the days' short names, e.g. "Mon, Fri".
+ */
+fun formatWeekdays(
+    days: Set<DayOfWeek>,
+    firstDayOfWeek: DayOfWeek,
+    locale: Locale = Locale.getDefault(),
+): String = when (days.size) {
+    7 -> "Every day"
+    0 -> "No days"
+    else -> weekStartingOn(firstDayOfWeek)
+        .filter { it in days }
+        .joinToString(", ") { it.getDisplayName(TextStyle.SHORT, locale) }
+}

@@ -13,6 +13,9 @@ sealed class Destination(val label: String, val route: String) {
     data object Home : Destination("Home", "home")
     data object Menu : Destination("Menu", "menu")
     data object AddHabit : Destination("Add Habit", "add")
+
+    // Add Habit's Advanced options page (the weekdays a habit is due on).
+    data object AddHabitOptions : Destination("Advanced", "add/advanced")
     data object RemoveHabit : Destination("Remove Habit", "remove")
     data object EditHabitList : Destination("Edit Habit", "edit")
     data object StatisticsList : Destination("Statistics", "stats")
@@ -39,8 +42,8 @@ sealed class Destination(val label: String, val route: String) {
 
         private val fixed: List<Destination> by lazy {
             listOf(
-                Home, Menu, AddHabit, RemoveHabit, EditHabitList, StatisticsList, Settings, Timer,
-                NewTimer,
+                Home, Menu, AddHabit, AddHabitOptions, RemoveHabit, EditHabitList, StatisticsList,
+                Settings, Timer, NewTimer,
             )
         }
 

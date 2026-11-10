@@ -24,7 +24,11 @@ class HabitHistoryTest {
         deletedOn: LocalDate? = null,
         createdOn: LocalDate = startDate.minusDays(1),
         now: LocalDate = today,
-    ) = HabitHistory(startDate, createdOn, deletedOn, done, now)
+        days: Set<DayOfWeek> = DayOfWeek.entries.toSet(),
+    ) = HabitHistory(startDate, createdOn, deletedOn, done, now, days)
+
+    // October 2026 starts on a Thursday, so today (the 15th) is a Thursday.
+    private val mondaysAndFridays = setOf(DayOfWeek.MONDAY, DayOfWeek.FRIDAY)
 
     // ---- Calendar colours ----------------------------------------------------------------
 
@@ -224,5 +228,62 @@ class HabitHistoryTest {
                 })
             }
         }
+    }
+
+    // ---- Habits due on some weekdays only -------------------------------------------------
+
+    @Test
+    fun weekdays_offDaysAreGrey_dueDaysFollowTheUsualRules() {
+        val h = history(done = listOf(d(2)), days = mondaysAndFridays)
+        assertEquals(DayStatus.DONE, h.statusOn(d(2)))             // Friday, done
+        assertEquals(DayStatus.NOT_SCHEDULED, h.statusOn(d(3)))    // Saturday
+        assertEquals(DayStatus.MISSED, h.statusOn(d(5)))           // Monday, not done
+        assertEquals(DayStatus.NOT_SCHEDULED, h.statusOn(today))   // a Thursday
+        assertEquals(DayStatus.FUTURE, h.statusOn(d(16)))          // Friday to come: still future
+        assertEquals(DayStatus.MISSED, h.statusOn(d(28, 9)))       // a Monday before the start
+        assertEquals(DayStatus.NOT_SCHEDULED, h.statusOn(d(27, 9))) // a Sunday before the start
+    }
+
+    @Test
+    fun weekdays_onlyDueDaysCount_andOffDaysNeverBreakTheStreak() {
+        // Due so far: Fri 2, Mon 5, Fri 9, Mon 12. Every one done: an unbroken run of four.
+        assertEquals(
+            StatsSummary(done = 4, due = 4, currentStreak = 4, longestStreak = 4),
+            history(done = listOf(d(2), d(5), d(9), d(12)), days = mondaysAndFridays).summary,
+        )
+        // Monday the 5th missed: it breaks the run, the off days around it don't.
+        assertEquals(
+            StatsSummary(done = 3, due = 4, currentStreak = 2, longestStreak = 2),
+            history(done = listOf(d(2), d(9), d(12)), days = mondaysAndFridays).summary,
+        )
+    }
+
+    @Test
+    fun weekdays_todayDueAndUnticked_waitsUntilItEnds() {
+        val thursdays = setOf(DayOfWeek.THURSDAY)
+        // Thursdays the 1st and 8th done; today, the 15th, is due but not ticked yet.
+        assertEquals(
+            StatsSummary(done = 2, due = 2, currentStreak = 2, longestStreak = 2),
+            history(done = listOf(d(1), d(8)), days = thursdays).summary,
+        )
+        assertEquals(
+            StatsSummary(done = 3, due = 3, currentStreak = 3, longestStreak = 3),
+            history(done = listOf(d(1), d(8), d(15)), days = thursdays).summary,
+        )
+    }
+
+    @Test
+    fun weekdays_deletedOnADueDay_thatDayCountsOnlyIfTicked() {
+        val h = history(done = listOf(d(2), d(5), d(9)), deletedOn = d(12), days = mondaysAndFridays)
+        assertEquals(DayStatus.AFTER_DELETION, h.statusOn(d(12)))
+        assertEquals(DayStatus.AFTER_DELETION, h.statusOn(d(13)))
+        assertEquals(StatsSummary(done = 3, due = 3, currentStreak = 3, longestStreak = 3), h.summary)
+    }
+
+    @Test
+    fun weekdays_startedButNoDueDayYet_hasNothingToCount() {
+        // Started on Saturday the 10th; its first Friday is still to come.
+        val h = history(done = emptyList(), startDate = d(10), days = setOf(DayOfWeek.FRIDAY))
+        assertEquals(StatsSummary(0, 0, 0, 0), h.summary)
     }
 }

@@ -1,14 +1,17 @@
 package com.reevan.reevzhabitz.ui.habitform
 
 import com.reevan.reevzhabitz.data.Habit
+import com.reevan.reevzhabitz.data.Weekdays
 import com.reevan.reevzhabitz.util.capitalizeWords
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 /**
  * What the Add Habit form has collected so far. Nullable fields are ones the user hasn't picked.
  *
  * Every field is required and nothing is preselected — the user assigns colour and icon
- * themselves. Start date is the exception: it defaults to tomorrow, as the spec asks.
+ * themselves. Start date is the exception: it defaults to tomorrow, as the spec asks. So are the
+ * [days] from Advanced options: every day, unless the user picks some; at least one is needed.
  */
 data class HabitDraft(
     val name: String,
@@ -16,9 +19,11 @@ data class HabitDraft(
     val colorKey: String?,
     val iconKey: String?,
     val startDate: LocalDate,
+    val days: Set<DayOfWeek> = Weekdays.EveryDay,
 ) {
     val isComplete: Boolean
-        get() = name.isNotBlank() && description.isNotBlank() && colorKey != null && iconKey != null
+        get() = name.isNotBlank() && description.isNotBlank() && colorKey != null &&
+            iconKey != null && days.isNotEmpty()
 
     /**
      * The habit to store. The name is trimmed and gets the same word capitalisation the name field
@@ -35,6 +40,7 @@ data class HabitDraft(
             iconKey = iconKey!!,
             startDate = maxOf(startDate, today),
             createdAt = createdAt,
+            days = days,
         )
     }
 }

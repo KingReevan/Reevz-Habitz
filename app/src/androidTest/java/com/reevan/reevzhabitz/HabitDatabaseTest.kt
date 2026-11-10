@@ -17,6 +17,12 @@ import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.time.DayOfWeek
+import java.time.DayOfWeek.FRIDAY
+import java.time.DayOfWeek.MONDAY
+import java.time.DayOfWeek.SATURDAY
+import java.time.DayOfWeek.SUNDAY
+import java.time.DayOfWeek.TUESDAY
 import java.time.LocalDate
 
 /**
@@ -95,6 +101,35 @@ class HabitDatabaseTest {
         db.openHelper.writableDatabase.execSQL("DELETE FROM habits WHERE id = $id")
 
         assertEquals(1, completionCount())
+    }
+
+    @Test
+    fun observeDueOn_listsOnlyHabitsDueOnThatWeekday() = runBlocking {
+        // The 3rd of October 2026 is a Saturday.
+        val everyDay = db.habitDao().insert(habit("Every Day"))
+        val weekends = db.habitDao().insert(habit("Weekends").copy(days = setOf(SATURDAY, SUNDAY)))
+        val mondays = db.habitDao().insert(habit("Mondays").copy(days = setOf(MONDAY)))
+
+        suspend fun dueOn(date: LocalDate) =
+            db.habitDao().observeDueOn(date).first().map { it.habit.id }.toSet()
+        assertEquals(setOf(everyDay, weekends), dueOn(day))
+        assertEquals(setOf(everyDay, weekends), dueOn(day.plusDays(1)))   // Sunday
+        assertEquals(setOf(everyDay, mondays), dueOn(day.plusDays(2)))    // Monday
+        assertEquals(setOf(everyDay), dueOn(day.plusDays(3)))             // Tuesday
+    }
+
+    @Test
+    fun habit_roundTripsItsDays() = runBlocking {
+        val picked = setOf(TUESDAY, FRIDAY, SUNDAY)
+        val id = db.habitDao().insert(habit().copy(days = picked))
+        assertEquals(picked, db.habitDao().getById(id)!!.days)
+        // Stored as the mask that the column default and the migration use (see Weekdays).
+        val mask = db.openHelper.readableDatabase.query("SELECT days FROM habits WHERE id = $id")
+            .use { it.moveToFirst(); it.getInt(0) }
+        assertEquals(2 or 16 or 64, mask)
+        // A habit made without choosing is due every day.
+        val plain = db.habitDao().insert(habit())
+        assertEquals(DayOfWeek.entries.toSet(), db.habitDao().getById(plain)!!.days)
     }
 
     @Test

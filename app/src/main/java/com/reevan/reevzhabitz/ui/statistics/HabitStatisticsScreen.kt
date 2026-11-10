@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -47,6 +46,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.reevan.reevzhabitz.R
 import com.reevan.reevzhabitz.data.Habit
+import com.reevan.reevzhabitz.ui.common.currentLocale
+import com.reevan.reevzhabitz.ui.common.firstDayOfWeek
 import com.reevan.reevzhabitz.ui.theme.HabitColors
 import com.reevan.reevzhabitz.ui.theme.HabitIcons
 import com.reevan.reevzhabitz.ui.theme.HabitzTheme
@@ -57,8 +58,6 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import java.time.temporal.WeekFields
-import java.util.Locale
 
 /**
  * One habit's statistics: a thin collapsible strip with its numbers, then a month calendar with
@@ -112,10 +111,6 @@ fun HabitStatisticsScreen(
 }
 
 private class Loaded(val state: HabitStatsState?)
-
-/** The phone's locale, read so the calendar recomposes if the language or region changes. */
-@Composable
-private fun currentLocale(): Locale = LocalConfiguration.current.locales[0]
 
 private fun YearMonth.toIndex(): Int = year * 12 + (monthValue - 1)
 
@@ -236,14 +231,14 @@ private fun MonthHeader(
 @Composable
 private fun MonthCalendar(month: YearMonth, history: HabitHistory) {
     val locale = currentLocale()
-    val firstDayOfWeek = WeekFields.of(locale).firstDayOfWeek
-    val cells = remember(month, firstDayOfWeek) { monthGrid(month, firstDayOfWeek) }
+    val weekStart = firstDayOfWeek()
+    val cells = remember(month, weekStart) { monthGrid(month, weekStart) }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.fillMaxWidth()) {
             repeat(7) { i ->
                 Text(
-                    text = firstDayOfWeek.plus(i.toLong()).getDisplayName(TextStyle.NARROW, locale),
+                    text = weekStart.plus(i.toLong()).getDisplayName(TextStyle.NARROW, locale),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -278,10 +273,11 @@ private fun DayCircle(day: LocalDate, history: HabitHistory) {
     val fill = when (status) {
         DayStatus.DONE -> colors.done
         DayStatus.MISSED -> colors.missed
-        DayStatus.FUTURE, DayStatus.AFTER_DELETION -> colors.future
+        DayStatus.FUTURE, DayStatus.NOT_SCHEDULED, DayStatus.AFTER_DELETION -> colors.future
     }
     val number = when (status) {
-        DayStatus.FUTURE, DayStatus.AFTER_DELETION -> MaterialTheme.colorScheme.onSurfaceVariant
+        DayStatus.FUTURE, DayStatus.NOT_SCHEDULED, DayStatus.AFTER_DELETION ->
+            MaterialTheme.colorScheme.onSurfaceVariant
         else -> readableOn(fill)
     }
     val isToday = day == history.today
@@ -289,6 +285,7 @@ private fun DayCircle(day: LocalDate, history: HabitHistory) {
         DayStatus.DONE -> "done"
         DayStatus.MISSED -> "missed"
         DayStatus.FUTURE -> "upcoming"
+        DayStatus.NOT_SCHEDULED -> "not one of its days"
         DayStatus.AFTER_DELETION -> "after deletion"
     }
 

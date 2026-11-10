@@ -1,5 +1,7 @@
 package com.reevan.reevzhabitz.ui.statistics
 
+import com.reevan.reevzhabitz.data.Weekdays
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -13,6 +15,9 @@ enum class DayStatus {
 
     /** Still to come. Grey. */
     FUTURE,
+
+    /** A weekday the habit isn't due on: neither done nor missed. Grey, like [FUTURE]. */
+    NOT_SCHEDULED,
 
     /** After the habit was deleted: it no longer existed, so neither done nor missed. Grey. */
     AFTER_DELETION,
@@ -31,8 +36,11 @@ data class StatsSummary(
  * rules can be tested exhaustively.
  *
  * The rules (agreed with the owner):
- * - A habit is due every day from [startDate]. Days before it show red in the calendar but never
- *   count in the numbers.
+ * - A habit is due from [startDate] on each of its [days] (every day unless chosen otherwise).
+ *   Due days before [startDate] show red in the calendar but never count in the numbers.
+ * - Any other weekday is not due: grey, and it counts for nothing — it neither adds to X/Y nor
+ *   breaks a streak. A Monday-and-Friday habit done every Monday and Friday has an unbroken
+ *   streak, counted in due days.
  * - A day "settles" once it is over. Today — or for a deleted habit, its deletion day — has not
  *   settled: it counts in the numbers only if it was ticked, so an unticked today neither lowers
  *   X/Y nor breaks the streak until it ends (the Duolingo / Snapchat rule). The calendar still
@@ -47,6 +55,8 @@ class HabitHistory(
     val deletedOn: LocalDate?,
     doneDays: Collection<LocalDate>,
     val today: LocalDate,
+    /** The weekdays it is due on. */
+    val days: Set<DayOfWeek> = Weekdays.EveryDay,
 ) {
     private val done: Set<LocalDate> = doneDays.toHashSet()
 
@@ -61,13 +71,16 @@ class HabitHistory(
         deletedOn != null && day.isAfter(deletedOn) -> DayStatus.AFTER_DELETION
         day in done -> DayStatus.DONE
         day == deletedOn -> DayStatus.AFTER_DELETION
+        !isDue(day) -> DayStatus.NOT_SCHEDULED
         else -> DayStatus.MISSED
     }
+
+    private fun isDue(day: LocalDate): Boolean = day.dayOfWeek in days
 
     val summary: StatsSummary by lazy { computeSummary() }
 
     private fun computeSummary(): StatsSummary {
-        val openDayCounts = !openDay.isBefore(startDate) && openDay in done
+        val openDayCounts = !openDay.isBefore(startDate) && isDue(openDay) && openDay in done
         // The last day that counts towards the numbers.
         val lastCounted = if (openDayCounts) openDay else lastSettledDay
         if (lastCounted.isBefore(startDate)) return StatsSummary(0, 0, 0, 0)
@@ -78,6 +91,10 @@ class HabitHistory(
         var longest = 0
         var day = startDate
         while (!day.isAfter(lastCounted)) {
+            if (!isDue(day)) {
+                day = day.plusDays(1)
+                continue
+            }
             due++
             if (day in done) {
                 doneCount++

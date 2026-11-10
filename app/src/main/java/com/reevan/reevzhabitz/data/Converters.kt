@@ -1,6 +1,7 @@
 package com.reevan.reevzhabitz.data
 
 import androidx.room.TypeConverter
+import java.time.DayOfWeek
 import java.time.LocalDate
 
 /**
@@ -14,4 +15,11 @@ class Converters {
 
     @TypeConverter
     fun toEpochDay(date: LocalDate?): Long? = date?.toEpochDay()
+
+    /** A habit's weekdays, stored as a mask (see [Weekdays]). */
+    @TypeConverter
+    fun fromWeekdayMask(mask: Int): Set<DayOfWeek> = Weekdays.fromMask(mask)
+
+    @TypeConverter
+    fun toWeekdayMask(days: Set<DayOfWeek>): Int = Weekdays.toMask(days)
 }

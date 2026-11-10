@@ -39,12 +39,14 @@ import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDatabase
 import com.reevan.reevzhabitz.data.HomeSort
 import com.reevan.reevzhabitz.data.ThemeMode
+import com.reevan.reevzhabitz.data.Weekdays
 import com.reevan.reevzhabitz.timer.ONE_MINUTE
 import com.reevan.reevzhabitz.timer.TimerController
 import com.reevan.reevzhabitz.timer.TimerNotifications
 import com.reevan.reevzhabitz.timer.TimerState
 import com.reevan.reevzhabitz.timer.formatTimer
 import com.reevan.reevzhabitz.timer.preset
+import com.reevan.reevzhabitz.ui.addhabit.ADVANCED_OPTIONS
 import com.reevan.reevzhabitz.ui.common.BREADCRUMBS_TAG
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -55,7 +57,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.ExternalResource
 import org.junit.runner.RunWith
+import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.format.TextStyle
+import java.util.Locale
 
 /**
  * End-to-end flows through the real app: real Activity, real database, real "today".
@@ -104,6 +109,7 @@ class AppFlowsTest {
         createdAt: Long = System.currentTimeMillis(),
         color: String = "teal",
         icon: String = "run",
+        days: Set<DayOfWeek> = Weekdays.EveryDay,
     ) = Habit(
         name = name,
         description = "About $name.",
@@ -111,6 +117,7 @@ class AppFlowsTest {
         iconKey = icon,
         startDate = start,
         createdAt = createdAt,
+        days = days,
     )
 
     private fun insert(vararg habits: Habit): List<Long> = runBlocking {
@@ -183,6 +190,19 @@ class AppFlowsTest {
         waitForText("Started Earlier")
         rule.onNodeWithText("Starts Today").assertIsDisplayed()
         rule.onNodeWithText("Starts Tomorrow").assertDoesNotExist()
+    }
+
+    @Test
+    fun home_showsAHabitOnlyOnItsWeekdays() {
+        val todays = today.dayOfWeek
+        insert(
+            habit("On Today", days = setOf(todays)),
+            habit("On Every Other Day", days = Weekdays.EveryDay - todays),
+            habit("Every Day"),
+        )
+        waitForText("On Today")
+        rule.onNodeWithText("Every Day").assertIsDisplayed()
+        rule.onNodeWithText("On Every Other Day").assertDoesNotExist()
     }
 
     @Test
@@ -422,6 +442,68 @@ class AppFlowsTest {
         assertEquals("sky", saved.colorKey)
         assertEquals("water", saved.iconKey)
         assertEquals(today.plusDays(1), saved.startDate)
+    }
+
+    private fun dayName(day: DayOfWeek) = day.getDisplayName(TextStyle.FULL, Locale.getDefault())
+
+    @Test
+    fun addHabit_advancedOptions_picksTheDays_andTheFormKeepsEverythingTyped() {
+        openFromMenu("ADD HABIT")
+        waitForText("Create")
+        rule.onNodeWithText("Habit name").performTextInput("gym day")
+        rule.onNodeWithText("Description").performTextInput("Legs.")
+        rule.onNodeWithContentDescription("Sky").performScrollTo().performClick()
+        rule.onNodeWithContentDescription("Water").performScrollTo().performClick()
+
+        // Every day by default.
+        rule.onNodeWithContentDescription(ADVANCED_OPTIONS).performClick()
+        waitForCrumbs("Home", "Menu", "Add Habit", "Advanced")
+        rule.onNodeWithText("Every day").assertIsDisplayed()
+        DayOfWeek.entries.forEach { rule.onNodeWithContentDescription(dayName(it)).assertIsOn() }
+
+        // No days at all can't be created.
+        DayOfWeek.entries.forEach { rule.onNodeWithContentDescription(dayName(it)).performClick() }
+        rule.onNodeWithText("Pick at least one day.").assertIsDisplayed()
+        rule.onNodeWithContentDescription("Back").performClick()
+        waitForCrumbs("Home", "Menu", "Add Habit")
+        rule.onNodeWithText("No days").assertIsDisplayed()
+        rule.onNodeWithText("Create").assertIsNotEnabled()
+
+        // Pick two; they survive a rotation on the options page.
+        rule.onNodeWithContentDescription(ADVANCED_OPTIONS).performClick()
+        waitForCrumbs("Home", "Menu", "Add Habit", "Advanced")
+        rule.onNodeWithContentDescription(dayName(DayOfWeek.TUESDAY)).performClick()
+        rule.onNodeWithContentDescription(dayName(DayOfWeek.FRIDAY)).performClick()
+        rule.activityRule.scenario.recreate()
+        waitForCrumbs("Home", "Menu", "Add Habit", "Advanced")
+        rule.onNodeWithContentDescription(dayName(DayOfWeek.FRIDAY)).assertIsOn()
+        rule.onNodeWithContentDescription(dayName(DayOfWeek.MONDAY)).assertIsOff()
+
+        // System back returns to the form just as it was left, with the days shown in the bar.
+        Espresso.pressBack()
+        waitForCrumbs("Home", "Menu", "Add Habit")
+        rule.onNodeWithText("Gym Day").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("Tue, Fri").assertIsDisplayed()
+        rule.onNodeWithText("Create").assertIsEnabled().performClick()
+
+        waitForText("ADD HABIT")
+        val saved = stored("Gym Day")!!
+        assertEquals(setOf(DayOfWeek.TUESDAY, DayOfWeek.FRIDAY), saved.days)
+        assertEquals("sky", saved.colorKey)
+        assertEquals("water", saved.iconKey)
+    }
+
+    @Test
+    fun addHabit_advancedOptionsLeftAlone_makeAnEveryDayHabit() {
+        openFromMenu("ADD HABIT")
+        waitForText("Create")
+        rule.onNodeWithText("Habit name").performTextInput("daily")
+        rule.onNodeWithText("Description").performTextInput("Every day.")
+        rule.onNodeWithContentDescription("Sky").performScrollTo().performClick()
+        rule.onNodeWithContentDescription("Water").performScrollTo().performClick()
+        rule.onNodeWithText("Create").performClick()
+        waitForText("ADD HABIT")
+        assertEquals(Weekdays.EveryDay, stored("Daily")!!.days)
     }
 
     @Test
@@ -767,6 +849,28 @@ class AppFlowsTest {
         val tallest = height("Long")
         assertEquals(tallest, height("Short"), 0.5f)
         assertEquals(tallest, height("Gone"), 0.5f)
+    }
+
+    @Test
+    fun statistics_countOnlyTheHabitsOwnWeekdays() {
+        // Due on today's weekday and the one three days back, from 13 days ago: so far 10, 7 and
+        // 3 days ago (today is due too, but unticked it doesn't count yet). All three done.
+        val days = setOf(today.dayOfWeek, today.minusDays(3).dayOfWeek)
+        val (id) = insert(habit("Twice Weekly", start = today.minusDays(13), days = days))
+        runBlocking {
+            listOf(10L, 7L, 3L).forEach {
+                db.completionDao().markDone(Completion(id, today.minusDays(it)))
+            }
+        }
+        openFromMenu("STATISTICS")
+        waitForText("Twice Weekly")
+        rule.onNodeWithText("Twice Weekly").performClick()
+        waitForCrumbs("Home", "Menu", "Statistics", "Stats")
+        rule.onNodeWithText("Twice Weekly").performClick()               // the strip
+        waitForText("Days done")
+        // Due every day it would be 3/13 with no streak; the off days count for nothing.
+        rule.onNodeWithText("3/3").assertIsDisplayed()
+        rule.onAllNodesWithText("3 days").assertCountEquals(2)
     }
 
     @Test

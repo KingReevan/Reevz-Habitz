@@ -141,8 +141,12 @@ fun ReevzHabitzApp(openTimerRequests: Int = 0) {
                     onMarkNotDone = home::markNotDone,
                 )
                 Destination.Menu -> MenuScreen(onOpen = navigate)
-                Destination.AddHabit -> AddHabitScreen(
+                // One call for both, so the form and everything typed into it stay alive while its
+                // Advanced options page is open.
+                Destination.AddHabit, Destination.AddHabitOptions -> AddHabitScreen(
                     today = today,
+                    showingOptions = current == Destination.AddHabitOptions,
+                    onOpenOptions = { navigate(Destination.AddHabitOptions) },
                     onCreated = finish(Destination.AddHabit),
                 )
                 Destination.RemoveHabit -> RemoveHabitScreen(

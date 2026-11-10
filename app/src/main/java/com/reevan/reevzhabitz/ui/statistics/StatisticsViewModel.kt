@@ -82,6 +82,7 @@ class StatisticsViewModel(
                         deletedOn = it.deletedOn,
                         doneDays = doneDays,
                         today = day,
+                        days = it.days,
                     ),
                 )
             }

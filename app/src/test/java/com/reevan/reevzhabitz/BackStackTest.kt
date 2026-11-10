@@ -124,6 +124,7 @@ class BackStackTest {
             Destination.Home,
             Destination.Menu,
             Destination.AddHabit,
+            Destination.AddHabitOptions,
             Destination.RemoveHabit,
             Destination.EditHabitList,
             Destination.StatisticsList,

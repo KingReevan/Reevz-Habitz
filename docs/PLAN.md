@@ -16,6 +16,7 @@ change → build/test → report). At the end of every phase, update "Current pr
 | 7 | Statistics | Habit list (active + deleted), month calendar, stats accordion | ✅ |
 | 8 | Polish | Empty states, theme pass, lint, on-device verification | ✅ |
 | + | Timer (added 2026-10-13) | Menu > Timer: Clock-style saved timers (cards), countdown that runs and rings in the background | ✅ |
+| + | Weekdays (added 2026-11-10) | Add Habit > Advanced options: pick the weekdays a habit is due on (schema v2) | ✅ |
 
 ---
 
@@ -33,7 +34,7 @@ Each is tagged with the phase that needs the answer; it doesn't block earlier ph
 | Q4 | Newest/Oldest sort: by creation time or Start From? Is the sort choice remembered? | 4 | **Creation time; remembered across restarts.** Only the checkbox ticks a habit (not the whole card). |
 | Q5 | Do not-yet-started habits appear in Remove / Edit / Statistics? | 5 | **Remove: yes.** The list follows Home's sort; removing returns to the Menu. **Edit: yes**, also in Home's sort; the editor's breadcrumb reads "Edit". **Statistics: no** — hidden until started (and deleted habits that never started are hidden); its breadcrumb reads "Stats". |
 | Q6 | The spec lists 4 themes. Drop the "follow system" option? | 2 | **Yes** — only Light, Dark, VS Code Dark, Tokyo Night. |
-| Q7 | "Every single day" = no weekday-only schedules? | 1 | **Yes** — every habit is due every day once started. |
+| Q7 | "Every single day" = no weekday-only schedules? | 1 | **Yes** — every habit is due every day once started. **Changed 2026-11-10:** a habit can be limited to chosen weekdays under Add Habit's Advanced options (every day by default; set at creation only, not editable). Off days are grey in Statistics and count for nothing. |
 | Q8 | Current streak while today is still unticked: show yesterday's streak until the day ends (Duolingo-style), or 0? | 7 | **Keep yesterday's** until today ends. Likewise an unticked today doesn't count in X/Y yet (it is still red in the calendar). |
 | Q9 | Add Habit: which fields are required? | 3 | **Every field is required, nothing preselected** (Start From still defaults to tomorrow). |
 | Q10 | Headers on Add/Remove/Edit/Statistics/Settings: back arrow + breadcrumb like Menu (e.g. `Home > Menu > Add Habit`)? | 1 | **Yes** — every screen after Menu. |
@@ -68,6 +69,7 @@ habits
   startDate    INTEGER   -- LocalDate epoch day; first day it shows on Home
   createdAt    INTEGER   -- epoch millis; sort tiebreaks / "newest"
   deletedOn    INTEGER?  -- epoch day; null = active. Set = deleted but stats kept
+  days         INTEGER   -- v2: weekdays due, mask Monday = 1 … Sunday = 64; default 127 = every day
 
 completions                -- one row = "habit done on that day"
   habitId      INTEGER FK → habits.id ON DELETE CASCADE
