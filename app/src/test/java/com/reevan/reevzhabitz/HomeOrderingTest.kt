@@ -11,7 +11,13 @@ import java.time.LocalDate
 
 class HomeOrderingTest {
 
-    private fun item(id: Long, name: String, createdAt: Long, done: Boolean = false) = HabitOnDay(
+    private fun item(
+        id: Long,
+        name: String,
+        createdAt: Long,
+        position: Int = 0,
+        done: Boolean = false,
+    ) = HabitOnDay(
         habit = Habit(
             id = id,
             name = name,
@@ -20,73 +26,50 @@ class HomeOrderingTest {
             iconKey = "run",
             startDate = LocalDate.of(2026, 10, 1),
             createdAt = createdAt,
+            homePosition = position,
         ),
         done = done,
     )
 
-    private val read = item(1, "Read", createdAt = 100)
-    private val gym = item(2, "Gym", createdAt = 300)
-    private val water = item(3, "drink water", createdAt = 200)
+    private val read = item(1, "Read", createdAt = 100, position = 2)
+    private val gym = item(2, "Gym", createdAt = 300, position = 0)
+    private val water = item(3, "drink water", createdAt = 200, position = 1)
     private val all = listOf(read, gym, water)
 
     private fun names(list: List<HabitOnDay>) = list.map { it.habit.name }
 
     @Test
-    fun alphabetical_ignoresCase() {
-        assertEquals(listOf("drink water", "Gym", "Read"), names(orderForHome(all, HomeSort.ALPHABETICAL)))
+    fun home_followsTheHabitOrder_notNamesOrDates() {
+        assertEquals(listOf("Gym", "drink water", "Read"), names(orderForHome(all)))
+        val moved = listOf(read.copy(habit = read.habit.copy(homePosition = -1)), gym, water)
+        assertEquals(listOf("Read", "Gym", "drink water"), names(orderForHome(moved)))
     }
 
     @Test
-    fun newestFirst_isByCreationTimeDescending() {
-        assertEquals(listOf("Gym", "drink water", "Read"), names(orderForHome(all, HomeSort.NEWEST_FIRST)))
-    }
-
-    @Test
-    fun oldestFirst_isByCreationTimeAscending() {
-        assertEquals(listOf("Read", "drink water", "Gym"), names(orderForHome(all, HomeSort.OLDEST_FIRST)))
-    }
-
-    @Test
-    fun doneHabitsSinkToTheBottom_andKeepTheSortAmongThemselves() {
+    fun doneHabitsSinkToTheBottom_andKeepTheOrderAmongThemselves() {
         val mixed = listOf(
             read.copy(done = true),
             gym,
             water.copy(done = true),
-            item(4, "Walk", createdAt = 50),
+            item(4, "Walk", createdAt = 50, position = 3),
         )
-        assertEquals(
-            listOf("Gym", "Walk", "drink water", "Read"),
-            names(orderForHome(mixed, HomeSort.ALPHABETICAL)),
-        )
-        assertEquals(
-            listOf("Gym", "Walk", "drink water", "Read"),
-            names(orderForHome(mixed, HomeSort.NEWEST_FIRST)),
-        )
-        assertEquals(
-            listOf("Walk", "Gym", "Read", "drink water"),
-            names(orderForHome(mixed, HomeSort.OLDEST_FIRST)),
-        )
+        assertEquals(listOf("Gym", "Walk", "drink water", "Read"), names(orderForHome(mixed)))
     }
 
     @Test
-    fun ties_fallBackToId_soTheOrderIsStable() {
-        val a = item(7, "Same", createdAt = 1)
-        val b = item(5, "Same", createdAt = 1)
-        HomeSort.entries.forEach { sort ->
-            assertEquals(listOf(5L, 7L), orderForHome(listOf(a, b), sort).map { it.habit.id })
-        }
+    fun samePlace_newestFirst_thenHigherId_soTheOrderIsStable() {
+        val older = item(7, "Older", createdAt = 1)
+        val newer = item(5, "Newer", createdAt = 2)
+        assertEquals(listOf("Newer", "Older"), names(orderForHome(listOf(older, newer))))
+        val a = item(5, "Same", createdAt = 1)
+        val b = item(7, "Same", createdAt = 1)
+        assertEquals(listOf(7L, 5L), orderForHome(listOf(a, b)).map { it.habit.id })
+        assertEquals(listOf(7L, 5L), orderForHome(listOf(b, a)).map { it.habit.id })
     }
 
     @Test
-    fun sortButton_cyclesAzThenNewestThenOldestThenBack() {
-        assertEquals(HomeSort.NEWEST_FIRST, HomeSort.ALPHABETICAL.next())
-        assertEquals(HomeSort.OLDEST_FIRST, HomeSort.NEWEST_FIRST.next())
-        assertEquals(HomeSort.ALPHABETICAL, HomeSort.OLDEST_FIRST.next())
-    }
-
-    @Test
-    fun plainHabitLists_followTheSameSort() {
-        // Remove Habit sorts plain habits with the same rules Home uses, minus the done grouping.
+    fun otherLists_keepTheirSort_whateverTheHabitOrder() {
+        // Edit, Remove and Statistics still go by the sort last picked, never by Habit Order.
         val habits = all.map { it.habit }
         assertEquals(
             listOf("drink water", "Gym", "Read"),
@@ -97,7 +80,16 @@ class HomeOrderingTest {
     }
 
     @Test
+    fun otherLists_tiesFallBackToId() {
+        val a = item(7, "Same", createdAt = 1).habit
+        val b = item(5, "Same", createdAt = 1).habit
+        HomeSort.entries.forEach { sort ->
+            assertEquals(listOf(5L, 7L), listOf(a, b).sortedFor(sort).map { it.id })
+        }
+    }
+
+    @Test
     fun emptyStaysEmpty() {
-        assertEquals(emptyList<HabitOnDay>(), orderForHome(emptyList(), HomeSort.ALPHABETICAL))
+        assertEquals(emptyList<HabitOnDay>(), orderForHome(emptyList()))
     }
 }

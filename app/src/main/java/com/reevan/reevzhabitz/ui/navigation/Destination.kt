@@ -3,7 +3,7 @@ package com.reevan.reevzhabitz.ui.navigation
 import com.reevan.reevzhabitz.timer.formatTimer
 
 /**
- * Every screen in the app. [label] is the screen's breadcrumb, and for the six Menu screens also
+ * Every screen in the app. [label] is the screen's breadcrumb, and for the seven Menu screens also
  * its Menu button text.
  *
  * [route] is a string form used only to save the back stack across process death; [fromRoute]
@@ -21,6 +21,7 @@ sealed class Destination(val label: String, val route: String) {
     data object StatisticsList : Destination("Statistics", "stats")
     data object Settings : Destination("Settings", "settings")
     data object Timer : Destination("Timer", "timer")
+    data object HabitOrder : Destination("Habit Order", "order")
     data object NewTimer : Destination("New", "timer/new")
 
     // A saved timer's page; its crumb is its length, e.g. "25:00".
@@ -37,13 +38,13 @@ sealed class Destination(val label: String, val route: String) {
     companion object {
         /** The Menu screen's buttons, top to bottom. */
         val menuEntries: List<Destination> by lazy {
-            listOf(AddHabit, RemoveHabit, EditHabitList, StatisticsList, Settings, Timer)
+            listOf(AddHabit, RemoveHabit, EditHabitList, StatisticsList, Settings, Timer, HabitOrder)
         }
 
         private val fixed: List<Destination> by lazy {
             listOf(
                 Home, Menu, AddHabit, AddHabitOptions, RemoveHabit, EditHabitList, StatisticsList,
-                Settings, Timer, NewTimer,
+                Settings, Timer, NewTimer, HabitOrder,
             )
         }
 

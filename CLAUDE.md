@@ -68,14 +68,15 @@ Windows / PowerShell (primary shell here):
 Instrumented tests (`connectedDebugAndroidTest`) need a running emulator or device; don't assume one
 is attached. They are:
 - `HabitDatabaseTest` — DAO queries against an in-memory database.
-- `MigrationTest` — builds a v1 database file (SQL copied from `1.json`) and opens it through
-  the app's real migrations, checking every habit, tick and setting survives. Extend it with each
-  new schema version.
+- `MigrationTest` — builds v1 and v2 database files (SQL copied from `1.json` / `2.json`) and
+  opens them through the app's real migrations, checking every habit, tick and setting survives
+  and Home's order stays put. Extend it with each new schema version.
 - `TimesUpActivityTest` — the "Time's up" page shown over the lock screen when a timer rings.
 - `AppFlowsTest` — end-to-end flows through the real Activity and **the real database, which it
-  wipes before every test**: Home ticking/sorting, navigation, Add (validation, capitalisation,
+  wipes before every test**: Home ticking/order, navigation, Add (validation, capitalisation,
   double tap), Remove (keep / delete stats), Edit (save, discard, double tap), Statistics (sections,
-  numbers), Settings (theme, clear deleted stats), Timer (keypad, pause/resume, ringing, opening
+  numbers), Habit Order (move by drag and by accessibility action, save, discard), Settings
+  (theme, clear deleted stats), Timer (keypad, pause/resume, ringing, opening
   from its notification), and state surviving rotation. Emulator only.
 
 Add a flow test here when adding or changing a user-facing flow.
@@ -132,8 +133,9 @@ Add a flow test here when adding or changing a user-facing flow.
 All eight phases of `docs/PLAN.md` are done: every screen in `docs/SPEC.md` is built and on the phone. Single Gradle module `:app`, package `com.reevan.reevzhabitz`.
 Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00050146M001006`; `minSdk 26` / `targetSdk 37`.
 
-- `data/` — Room schema v2: `habits` (soft delete via `deletedOn`; `days` = the weekdays it is
-  due on, a 7-bit mask via `data/Weekdays`, Monday = 1 … Sunday = 64, default 127 = every day),
+- `data/` — Room schema v3: `habits` (soft delete via `deletedOn`; `days` = the weekdays it is
+  due on, a 7-bit mask via `data/Weekdays`, Monday = 1 … Sunday = 64, default 127 = every day;
+  `homePosition` = its place on Home, from Habit Order),
   `completions` (one row per habit per day done, cascades on hard delete), `app_settings`
   (theme). Dates are `LocalDate` stored as epoch days (`Converters`). DAOs hold only basic reads/writes; screen-specific queries
   are added by the phase that needs them.
@@ -143,7 +145,7 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
 - `ui/navigation/` — hand-rolled back stack (`Destination` sealed class, pure `push`/`pop`, saved
   as route strings). `Destination`'s companion lists must stay `by lazy` (see the comment there).
 - `ui/common/AppHeader` — `DateHeader` (Home) and `BreadcrumbHeader` (every other screen).
-- `ui/menu/MenuScreen` — the six Menu buttons, styled as a game main menu.
+- `ui/menu/MenuScreen` — the seven Menu buttons, styled as a game main menu.
 - `ui/settings/SettingsScreen` — theme picker (radio rows with a swatch per theme).
 - `ui/common/HabitCard` — the shared habit card (coloured edge + white icon, name in the habit
   colour, optional description, trailing slot) and `HabitCardDivider`. Every list of habits uses it.
@@ -185,31 +187,42 @@ Target device is a **Nothing Phone (2a) on Android 15 (API 35)**, adb serial `00
   applies `capitalizeWords` when saving. Don't move it back into onValueChange or an
   InputTransformation — rewriting text the keyboard is composing desyncs it.
 - `ui/home/` — Home: today's habits via `HabitDao.observeDueOn(today)` (active, started, due on
-  today's weekday, with a `done` flag for that day), ordered by `orderForHome` (to-do first, done last, each group in the
-  chosen `HomeSort`; "newest" = most recently *created*). Only the checkbox ticks; unticking asks
-  first. A ticked habit is struck through and its edge, name and checkbox fade to the theme's
-  `HabitzTheme.colors.doneHabit` grey (contrast pinned by `ThemeColorsTest`). The sort is remembered in `app_settings.homeSort`; the header icon shows the current one.
-  `HomeViewModel` lives in the shell because the header's sort button needs it.
+  today's weekday, with a `done` flag for that day), ordered by `orderForHome` (to-do first, done
+  last, each group in Habit Order's order, `ui/common/HomePositionOrder`). There is no sort button
+  any more. Only the checkbox ticks; unticking asks first. A ticked habit is struck through and its
+  edge, name and checkbox fade to the theme's `HabitzTheme.colors.doneHabit` grey (contrast pinned
+  by `ThemeColorsTest`).
 - Finishing the day (spec: Home → "All done for the day"): ticking the last habit pops a gold star
   (`HabitzTheme.colors.star`) with a firmer buzz; a green card (`colors.done`) stays pinned at the
   bottom while `isDayComplete`. Whether a *tick* finished the day is decided by the pure
   `DayCompletionWatcher` (pinned by `DayCompletionTest`) once the tick lands in the list, never at
   tap time — ticks arrive from the database a moment later and two quick taps can land together.
-- `app_settings` is written with per-column UPDATEs (`setThemeMode`, `cycleHomeSort`), never by
+- `app_settings` is written with per-column UPDATEs (`setThemeMode`), never by
   rewriting the row, so two screens can't overwrite each other's preference.
 - Every Add Habit field is required (name, description, colour, icon); nothing is preselected.
   Start From defaults to tomorrow.
 - "Today" also restarts on clock / time zone / date change broadcasts (`util/clockChanges`), because
   the midnight delay counts elapsed time and can't see the wall clock jump.
-- `ui/removehabit/` — Remove Habit: every active habit (incl. not yet started) in Home's sort
-  (`ui/common/HabitOrder` — shared comparator), multi-select by checkbox, confirm dialog with
+- `ui/removehabit/` — Remove Habit: every active habit (incl. not yet started) in the lists' sort
+  (`app_settings.homeSort`, `ui/common/HabitOrder` — shared comparator), multi-select by checkbox, confirm dialog with
   "Keep stats" (on by default). `HabitDao.remove` soft-deletes (`deletedOn = today`) or hard-deletes
   (completions cascade). Returns to Menu.
+- `ui/habitorder/` — Habit Order (Menu, 7th button; spec: Menu Screen → Habit Order): every
+  active habit with its description, numbered on the right in Home's order. Long-press and drag a
+  card (with auto-scroll at the edges); TalkBack gets "Move up" / "Move down" actions, which the
+  tests use too. Save (`HabitDao.setHomeOrder`, places 0, 1, 2… — touches nothing else) returns to
+  the Menu; leaving unsaved asks "Discard changes?" via `LeaveGuard`. **It changes Home's order
+  only**: Edit, Remove and Statistics keep `app_settings.homeSort` — the sort last picked with
+  Home's old sort button, which Habit Order replaced and which nothing can change any more. New
+  habits go on top (`HabitDao.insertOnTop`). The drag rules are pure (`habitorder/Reorder.kt`,
+  pinned by `ReorderTest`); the gesture sits on the unmoving viewport, not the card, because a
+  card's own coordinates jump whenever it swaps or the list scrolls. The cards are equal height
+  (`SameHeightCards`), so a touch's slot is its height over one slot.
 - Settings → "Clear deleted stats" (`DeletedStatsViewModel`, `HabitDao.purgeDeleted`): hard-deletes
   every soft-deleted habit and its completions after a counted warning. This and Remove without
   stats are the only user-data deletes in the app.
-- `ui/edithabit/` — Edit Habit: list (active incl. not started, Home's sort, via the shared
-  `ui/common/activeHabitsInHomeOrder`) → editor for name/description/colour/icon only. Save is
+- `ui/edithabit/` — Edit Habit: list (active incl. not started, the lists' sort, via the shared
+  `ui/common/activeHabitsInListOrder`) → editor for name/description/colour/icon only. Save is
   enabled only for a real, complete change (`HabitEdits.changes`, normalised like Add). Back with
   changes asks "Discard changes?". The editor is `key`ed by habit id in the shell.
 - **One-shot actions (Create, Save, Remove) use `ui/common/Submission`.** The ViewModel owns a
@@ -277,7 +290,8 @@ Generated assets — edit the script, not the output:
 
 **Schema v1 has been on the phone since 2026-10-03 and is frozen.** Every schema change from now
 on is a version bump plus a migration (`@AutoMigration` where additive). Never edit v1 in place.
-v2 (`habits.days`, auto-migrated) went onto the phone on 2026-11-10; it is frozen the same way.
+v2 (`habits.days`) and v3 (`habits.homePosition`; `SeedHomePositions` numbers habits in the
+order Home showed) went onto the phone on 2026-11-10; both are frozen the same way.
 Before any `connectedAndroidTest` on the phone, back up its database (see Data guidelines) — the
 test run uninstalls the app and deletes it. Run instrumented tests on the emulator only: **when
 the phone is plugged in, set `ANDROID_SERIAL=emulator-5554` first**, or Gradle runs them on every

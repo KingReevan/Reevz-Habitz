@@ -17,6 +17,7 @@ change → build/test → report). At the end of every phase, update "Current pr
 | 8 | Polish | Empty states, theme pass, lint, on-device verification | ✅ |
 | + | Timer (added 2026-10-13) | Menu > Timer: Clock-style saved timers (cards), countdown that runs and rings in the background | ✅ |
 | + | Weekdays (added 2026-11-10) | Add Habit > Advanced options: pick the weekdays a habit is due on (schema v2) | ✅ |
+| + | Habit Order (added 2026-11-10) | Menu > Habit Order: drag habits into the order Home shows them; Home's sort button removed (schema v3) | ✅ |
 
 ---
 
@@ -31,7 +32,7 @@ Each is tagged with the phase that needs the answer; it doesn't block earlier ph
 | Q1 | Stats strip says "four statistics" but lists three. Is one missing? | 7 | **Just the three** (X/Y, current streak, longest streak). |
 | Q2 | Days before the habit existed are red. Do they count in X/Y and break streaks? Is "created" the creation day or the Start From date? | 7 | **Calendar only:** days before Start From are red but don't count in X/Y or streaks. |
 | Q3 | For a deleted habit, what colour are the days after deletion? | 7 | **Grey**, and they count for nothing. The deletion day itself counts only if ticked. |
-| Q4 | Newest/Oldest sort: by creation time or Start From? Is the sort choice remembered? | 4 | **Creation time; remembered across restarts.** Only the checkbox ticks a habit (not the whole card). |
+| Q4 | Newest/Oldest sort: by creation time or Start From? Is the sort choice remembered? | 4 | **Creation time; remembered across restarts.** Only the checkbox ticks a habit (not the whole card). **Changed 2026-11-10:** Home's sort button is gone; Home follows Menu > Habit Order (new habits on top, done ones still sink). Edit, Remove and Statistics keep the sort last picked. |
 | Q5 | Do not-yet-started habits appear in Remove / Edit / Statistics? | 5 | **Remove: yes.** The list follows Home's sort; removing returns to the Menu. **Edit: yes**, also in Home's sort; the editor's breadcrumb reads "Edit". **Statistics: no** — hidden until started (and deleted habits that never started are hidden); its breadcrumb reads "Stats". |
 | Q6 | The spec lists 4 themes. Drop the "follow system" option? | 2 | **Yes** — only Light, Dark, VS Code Dark, Tokyo Night. |
 | Q7 | "Every single day" = no weekday-only schedules? | 1 | **Yes** — every habit is due every day once started. **Changed 2026-11-10:** a habit can be limited to chosen weekdays under Add Habit's Advanced options (every day by default; set at creation only, not editable). Off days are grey in Statistics and count for nothing. |
@@ -70,6 +71,7 @@ habits
   createdAt    INTEGER   -- epoch millis; sort tiebreaks / "newest"
   deletedOn    INTEGER?  -- epoch day; null = active. Set = deleted but stats kept
   days         INTEGER   -- v2: weekdays due, mask Monday = 1 … Sunday = 64; default 127 = every day
+  homePosition INTEGER   -- v3: place on Home from Habit Order, lowest first; new habits go on top
 
 completions                -- one row = "habit done on that day"
   habitId      INTEGER FK → habits.id ON DELETE CASCADE

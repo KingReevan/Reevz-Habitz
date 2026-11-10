@@ -15,6 +15,27 @@ interface HabitDao {
     @Insert
     suspend fun insert(habit: Habit): Long
 
+    /** Add Habit's insert: the new habit goes above every other on Home. */
+    @Transaction
+    suspend fun insertOnTop(habit: Habit): Long =
+        insert(habit.copy(homePosition = (topHomePosition() ?: 1) - 1))
+
+    /** The first place on Home among active habits; null with none. */
+    @Query("SELECT MIN(homePosition) FROM habits WHERE deletedOn IS NULL")
+    suspend fun topHomePosition(): Int?
+
+    @Query("UPDATE habits SET homePosition = :position WHERE id = :id")
+    suspend fun setHomePosition(id: Long, position: Int)
+
+    /**
+     * Habit Order's Save: [ids], top first, become places 0, 1, 2… on Home. Only the place
+     * changes — never name, schedule or history.
+     */
+    @Transaction
+    suspend fun setHomeOrder(ids: List<Long>) {
+        ids.forEachIndexed { position, id -> setHomePosition(id, position) }
+    }
+
     /**
      * Rewrites the row in place (SQL UPDATE), so the habit keeps its id and every completion keyed
      * to it — editing a habit never touches its statistics. Never change this to an insert with

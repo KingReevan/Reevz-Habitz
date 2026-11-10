@@ -111,9 +111,12 @@ class BackStackTest {
     }
 
     @Test
-    fun menuEntries_areTheSixSectionsInSpecOrder() {
+    fun menuEntries_areTheSevenSectionsInSpecOrder() {
         assertEquals(
-            listOf("Add Habit", "Remove Habit", "Edit Habit", "Statistics", "Settings", "Timer"),
+            listOf(
+                "Add Habit", "Remove Habit", "Edit Habit", "Statistics", "Settings", "Timer",
+                "Habit Order",
+            ),
             Destination.menuEntries.map { it.label },
         )
     }
@@ -131,6 +134,7 @@ class BackStackTest {
             Destination.Settings,
             Destination.Timer,
             Destination.NewTimer,
+            Destination.HabitOrder,
             Destination.SavedTimer(25 * 60_000),
             Destination.EditHabit(42),
             Destination.HabitStatistics(7),

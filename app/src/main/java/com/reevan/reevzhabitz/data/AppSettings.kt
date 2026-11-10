@@ -12,16 +12,14 @@ enum class ThemeMode(val label: String) {
 }
 
 /**
- * Home's habit order. The sort button steps through these in declaration order and wraps:
- * A–Z → newest first → oldest first → A–Z. "Newest" means most recently created.
+ * The order of the Edit Habit, Remove Habit and Statistics lists. "Newest" means most recently
+ * created. It was set by Home's sort button, which Habit Order replaced on 2026-11-10; the lists
+ * keep whichever order was last picked. Home itself follows [Habit.homePosition].
  */
-enum class HomeSort(val label: String) {
-    ALPHABETICAL("A to Z"),
-    NEWEST_FIRST("Newest first"),
-    OLDEST_FIRST("Oldest first"),
-    ;
-
-    fun next(): HomeSort = entries[(ordinal + 1) % entries.size]
+enum class HomeSort {
+    ALPHABETICAL,
+    NEWEST_FIRST,
+    OLDEST_FIRST,
 }
 
 /** App-wide preferences. Single row, id 1. New preferences belong here. */

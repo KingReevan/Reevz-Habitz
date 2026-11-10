@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,7 +51,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.reevan.reevzhabitz.R
 import com.reevan.reevzhabitz.data.HabitOnDay
-import com.reevan.reevzhabitz.data.HomeSort
 import com.reevan.reevzhabitz.ui.common.HabitCard
 import com.reevan.reevzhabitz.ui.common.HabitCheckSection
 import com.reevan.reevzhabitz.ui.common.HabitCardDivider
@@ -281,22 +279,6 @@ private fun EmptyHome(modifier: Modifier) {
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
-        )
-    }
-}
-
-/** The header's sort button. Its icon shows the current order; each tap moves to the next. */
-@Composable
-fun SortButton(sort: HomeSort, onClick: () -> Unit) {
-    val icon = when (sort) {
-        HomeSort.ALPHABETICAL -> R.drawable.ic_sort_alphabetical
-        HomeSort.NEWEST_FIRST -> R.drawable.ic_sort_newest
-        HomeSort.OLDEST_FIRST -> R.drawable.ic_sort_oldest
-    }
-    IconButton(onClick = onClick) {
-        Icon(
-            painter = painterResource(icon),
-            contentDescription = "Sorted ${sort.label}. Change sort",
         )
     }
 }

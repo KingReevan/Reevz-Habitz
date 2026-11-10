@@ -32,7 +32,7 @@ class AddHabitViewModel(
     fun create(token: String, draft: HabitDraft) {
         val habit = draft.toHabit(today = today.value, createdAt = now())
         viewModelScope.launch {
-            habitDao.insert(habit)
+            habitDao.insertOnTop(habit)
             submissions.complete(token)
         }
     }

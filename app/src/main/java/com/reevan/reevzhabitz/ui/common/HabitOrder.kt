@@ -4,8 +4,18 @@ import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HomeSort
 
 /**
- * The order a [HomeSort] puts habits in. Shared by every list that follows Home's sort (Home,
- * Remove Habit), so the same habit sits in the same place on each.
+ * Home's order, the one set in Habit Order: by [Habit.homePosition], lowest first. Ties — habits
+ * stored without a place of their own — put the newest first, as a new habit goes on top, then
+ * the higher id, so the order never shuffles between recompositions.
+ */
+val HomePositionOrder: Comparator<Habit> =
+    compareBy<Habit> { it.homePosition }
+        .thenByDescending { it.createdAt }
+        .thenByDescending { it.id }
+
+/**
+ * The order a [HomeSort] puts habits in: the Edit Habit, Remove Habit and Statistics lists, so
+ * the same habit sits in the same place on each. (Home follows [HomePositionOrder] instead.)
  *
  * Ties — the same name, or created in the same millisecond — fall back to the id, so the order
  * never shuffles between recompositions.

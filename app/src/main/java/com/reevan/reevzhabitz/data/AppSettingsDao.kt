@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.Flow
 
 /**
  * The single settings row. Each preference is written with its own targeted UPDATE rather than by
- * rewriting the whole row, so Settings changing the theme and Home changing the sort can never
- * overwrite each other with a stale copy.
+ * rewriting the whole row, so two screens changing different preferences can never overwrite
+ * each other with a stale copy.
  */
 @Dao
 interface AppSettingsDao {
@@ -28,21 +28,9 @@ interface AppSettingsDao {
     @Query("UPDATE app_settings SET themeMode = :mode WHERE id = 1")
     suspend fun updateThemeMode(mode: ThemeMode)
 
-    @Query("UPDATE app_settings SET homeSort = :sort WHERE id = 1")
-    suspend fun updateHomeSort(sort: HomeSort)
-
     @Transaction
     suspend fun setThemeMode(mode: ThemeMode) {
         insertIfMissing(AppSettings())
         updateThemeMode(mode)
-    }
-
-    /** Steps Home's sort to the next order. Read and write in one transaction, so two quick taps
-     *  advance twice rather than both reading the same starting value. */
-    @Transaction
-    suspend fun cycleHomeSort() {
-        insertIfMissing(AppSettings())
-        val current = get()?.homeSort ?: HomeSort.ALPHABETICAL
-        updateHomeSort(current.next())
     }
 }

@@ -46,6 +46,8 @@ The habits are sorted alphabetically by default. When user clicks on the 'Sort' 
 
 Every time I click on the sort button, it should toggle between these 3. If the habits are currently arranged as 'Newest to Oldest' and then I click on the sort button, then the arrangement will become 'Oldest to Newest'. If I click on the sort button again it will become 'Alphabetical' and if I click again it will become 'Newest to Oldest' again and so on.
 
+> **Replaced on 2026-11-10 by Menu → Habit Order:** the sort icon is gone from Home's header, and Home shows the habits in the order set there (see Menu Screen → Habit Order).
+
 Since the habits shown on the Home screen are only of the current day, their status gets reset after 12:00 am when the new day begins.
 
 The habits must appear every single day in their 'undone' status (unticked).
@@ -59,7 +61,7 @@ After the star appears, a green card stays pinned at the bottom of the screen th
 ---
 ## Menu Screen
 
-The user will arrive at the menu screen when they click on the Menu icon on the header of the Home screen. The Menu screen looks like the Main Menu page of a video game. It will show six buttons on the screen. All arranged like a stack. This time the stack will have gaps between the buttons. These are the six buttons:
+The user will arrive at the menu screen when they click on the Menu icon on the header of the Home screen. The Menu screen looks like the Main Menu page of a video game. It will show seven buttons on the screen. All arranged like a stack. This time the stack will have gaps between the buttons. These are the seven buttons:
 
 1. `Add Habit`
 2. `Remove Habit`
@@ -67,6 +69,7 @@ The user will arrive at the menu screen when they click on the Menu icon on the 
 4. `Statistics`
 5. `Settings`
 6. `Timer`
+7. `Habit Order`
 
 The header of the menu screen will just have a arrow on the left most side that when clicked will return the user back to the Home screen. Put breadcrumb next to the arrow so that user knows where they have navigated (it will look like `Home > Menu`).
 
@@ -84,6 +87,16 @@ A generic timer for allocating time to a task before doing it, so there is no ne
 - If the screen is off or the phone is locked when it rings, the screen wakes up to a full-screen 'Time's up' page over the lock screen (Stop, `+1:00`), like the Clock app. It shows only the timer and does not unlock the phone.
 
 The header shows the breadcrumb `Home > Menu > Timer`, then `> New` on the number pad or `> 25:00` on a timer's page.
+
+### Habit Order
+
+I want to be able to perform my habits in a certain order whenever possible. So instead of sorting the Home screen A–Z or by oldest/newest, the order is set here (`Home > Menu > Habit Order`):
+
+- All the active habits and their descriptions are displayed as cards, with each one's position number on the right-hand side of the card, so the positions are clear even with many habits.
+- Hold a habit and drag it up or down to move it; the list scrolls when it is dragged near the top or bottom.
+- 'Save' at the bottom right stores the order and returns to the Menu. The habits then appear in this order on the Home screen. Leaving without saving asks first.
+- This only affects the order on the Home screen, nothing else. Completed habits still sink to the bottom of Home (in this order too). A newly added habit goes at the top.
+- The sort icon on Home's header is gone. Edit Habit, Remove Habit and Statistics keep the order they had (the sort last picked).
 
 ---
 ## Add Habit Screen

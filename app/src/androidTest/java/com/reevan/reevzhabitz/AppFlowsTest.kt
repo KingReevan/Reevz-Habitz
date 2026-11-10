@@ -29,6 +29,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.performCustomAccessibilityActionWithLabel
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.click
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso
@@ -47,6 +50,8 @@ import com.reevan.reevzhabitz.timer.TimerState
 import com.reevan.reevzhabitz.timer.formatTimer
 import com.reevan.reevzhabitz.timer.preset
 import com.reevan.reevzhabitz.ui.addhabit.ADVANCED_OPTIONS
+import com.reevan.reevzhabitz.ui.habitorder.MOVE_DOWN
+import com.reevan.reevzhabitz.ui.habitorder.MOVE_UP
 import com.reevan.reevzhabitz.ui.common.BREADCRUMBS_TAG
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -110,6 +115,7 @@ class AppFlowsTest {
         color: String = "teal",
         icon: String = "run",
         days: Set<DayOfWeek> = Weekdays.EveryDay,
+        position: Int = 0,
     ) = Habit(
         name = name,
         description = "About $name.",
@@ -118,6 +124,7 @@ class AppFlowsTest {
         startDate = start,
         createdAt = createdAt,
         days = days,
+        homePosition = position,
     )
 
     private fun insert(vararg habits: Habit): List<Long> = runBlocking {
@@ -212,9 +219,9 @@ class AppFlowsTest {
 
     @Test
     fun home_tickingCrossesOffAndSinksToTheBottom_untickAsksFirst() {
-        val (alpha, _) = insert(habit("Alpha"), habit("Bravo"))
+        val (alpha, _) = insert(habit("Alpha", position = 0), habit("Bravo", position = 1))
         waitForText("Alpha")
-        assertTrue("A–Z: Alpha first", top("Alpha") < top("Bravo"))
+        assertTrue("Habit Order: Alpha first", top("Alpha") < top("Bravo"))
 
         rule.onNodeWithContentDescription("Alpha").performClick()
         waitFor { isDone(alpha) }
@@ -296,28 +303,20 @@ class AppFlowsTest {
     }
 
     @Test
-    fun home_sortCyclesThroughThreeOrdersAndIsRemembered() {
+    fun home_followsTheHabitOrder_andHasNoSortButton() {
         val now = System.currentTimeMillis()
         insert(
-            habit("Middle", createdAt = now - 2_000),
-            habit("Zed Oldest", createdAt = now - 3_000),
-            habit("Apple Newest", createdAt = now - 1_000),
+            habit("Middle", createdAt = now - 2_000, position = 2),
+            habit("Zed Oldest", createdAt = now - 3_000, position = 0),
+            habit("Apple Newest", createdAt = now - 1_000, position = 1),
         )
         waitForText("Middle")
-        fun order() = listOf("Apple Newest", "Middle", "Zed Oldest").sortedBy { top(it) }
-
-        assertEquals(listOf("Apple Newest", "Middle", "Zed Oldest"), order())
-        rule.onNodeWithContentDescription("Sorted A to Z. Change sort").performClick()
-        rule.waitUntilAtLeastOneExists(hasContentDescription("Sorted Newest first. Change sort"))
-        waitFor { order() == listOf("Apple Newest", "Middle", "Zed Oldest") }
-
-        rule.onNodeWithContentDescription("Sorted Newest first. Change sort").performClick()
-        rule.waitUntilAtLeastOneExists(hasContentDescription("Sorted Oldest first. Change sort"))
-        waitFor { order() == listOf("Zed Oldest", "Middle", "Apple Newest") }
-        assertEquals(HomeSort.OLDEST_FIRST, runBlocking { db.appSettingsDao().get()!!.homeSort })
-
-        rule.onNodeWithContentDescription("Sorted Oldest first. Change sort").performClick()
-        rule.waitUntilAtLeastOneExists(hasContentDescription("Sorted A to Z. Change sort"))
+        // Neither A to Z nor by date: the order set in Habit Order.
+        assertEquals(
+            listOf("Zed Oldest", "Apple Newest", "Middle"),
+            listOf("Apple Newest", "Middle", "Zed Oldest").sortedBy { top(it) },
+        )
+        rule.onNodeWithContentDescription("Change sort", substring = true).assertDoesNotExist()
     }
 
     // ---- Navigation ------------------------------------------------------------------------
@@ -886,6 +885,150 @@ class AppFlowsTest {
         waitForText(label)
         rule.activityRule.scenario.recreate()
         waitForText(label)
+    }
+
+    // ---- Habit Order -----------------------------------------------------------------------
+
+    /** The Habit Order card for [name] — its merged node, holding name, description and place. */
+    private fun orderCard(name: String) = rule.onNode(hasText(name) and hasText("About $name."))
+
+    /** The names on Habit Order (or any list), top to bottom. */
+    private fun shownTopToBottom(vararg names: String) = names.sortedBy { top(it) }
+
+    private fun place(name: String): Int = stored(name)!!.homePosition
+
+    @Test
+    fun habitOrder_listsEveryActiveHabitNumbered_inHomeOrder() {
+        val (_, _, _, gone) = insert(
+            habit("Second", position = 1),
+            habit("First", position = 0),
+            habit("Later", start = today.plusDays(3), position = 2),       // not started yet
+            habit("Gone", position = 3),
+        )
+        runBlocking { db.habitDao().remove(listOf(gone), keepStats = true, today = today) }
+        openFromMenu("HABIT ORDER")
+        waitForCrumbs("Home", "Menu", "Habit Order")
+        waitForText("First")
+        assertEquals(listOf("First", "Second", "Later"), shownTopToBottom("Later", "First", "Second"))
+        rule.onNode(hasText("First") and hasText("1")).assertIsDisplayed()
+        rule.onNode(hasText("Second") and hasText("2")).assertIsDisplayed()
+        rule.onNode(hasText("Later") and hasText("3")).assertIsDisplayed()
+        rule.onNodeWithText("About First.").assertIsDisplayed()         // descriptions shown
+        rule.onNodeWithText("Gone").assertDoesNotExist()
+        rule.onNodeWithText("Save").assertIsNotEnabled()
+    }
+
+    @Test
+    fun habitOrder_movedAndSaved_changesHomeAndNothingElse() {
+        insert(
+            habit("Alpha", position = 0),
+            habit("Bravo", position = 1),
+            habit("Charlie", position = 2),
+        )
+        openFromMenu("HABIT ORDER")
+        waitForText("Alpha")
+        orderCard("Alpha").performCustomAccessibilityActionWithLabel(MOVE_DOWN)
+        orderCard("Alpha").performCustomAccessibilityActionWithLabel(MOVE_DOWN)
+        orderCard("Charlie").performCustomAccessibilityActionWithLabel(MOVE_UP)
+        waitFor { shownTopToBottom("Alpha", "Bravo", "Charlie") == listOf("Charlie", "Bravo", "Alpha") }
+        rule.onNode(hasText("Charlie") and hasText("1")).assertIsDisplayed()
+        rule.onNode(hasText("Alpha") and hasText("3")).assertIsDisplayed()
+
+        // The unsaved order survives a rotation.
+        rule.activityRule.scenario.recreate()
+        waitForText("Alpha")
+        assertEquals(listOf("Charlie", "Bravo", "Alpha"), shownTopToBottom("Alpha", "Bravo", "Charlie"))
+        assertEquals(0, place("Alpha"))                                   // nothing stored yet
+
+        rule.onNodeWithText("Save").assertIsEnabled().performClick()
+        waitForText("HABIT ORDER")                                        // back on the Menu
+        assertEquals(listOf(2, 1, 0), listOf("Alpha", "Bravo", "Charlie").map(::place))
+
+        // Home follows it…
+        rule.onNodeWithContentDescription("Back").performClick()
+        waitForText("Alpha")
+        assertEquals(listOf("Charlie", "Bravo", "Alpha"), shownTopToBottom("Alpha", "Bravo", "Charlie"))
+
+        // …and Edit Habit keeps its own order (A to Z, the sort last picked).
+        openFromMenu("EDIT HABIT")
+        waitForText("Alpha")
+        assertEquals(listOf("Alpha", "Bravo", "Charlie"), shownTopToBottom("Alpha", "Bravo", "Charlie"))
+    }
+
+    @Test
+    fun habitOrder_holdAndDrag_movesTheCard() {
+        insert(
+            habit("Alpha", position = 0),
+            habit("Bravo", position = 1),
+            habit("Charlie", position = 2),
+            habit("Delta", position = 3),
+        )
+        openFromMenu("HABIT ORDER")
+        waitForText("Alpha")
+        val height = orderCard("Alpha").fetchSemanticsNode().boundsInRoot.height
+        // Hold, then drag down two and a half cards: Alpha passes Bravo and Charlie.
+        orderCard("Alpha").performTouchInput {
+            down(center)
+            advanceEventTime(1_000)
+            repeat(10) {
+                moveBy(Offset(0f, height * 0.25f))
+                advanceEventTime(16)
+            }
+            up()
+        }
+        waitFor {
+            shownTopToBottom("Alpha", "Bravo", "Charlie", "Delta") ==
+                listOf("Bravo", "Charlie", "Alpha", "Delta")
+        }
+        rule.onNode(hasText("Alpha") and hasText("3")).assertIsDisplayed()
+        rule.onNodeWithText("Save").assertIsEnabled()
+    }
+
+    @Test
+    fun habitOrder_leavingUnsaved_asksFirst_andDiscardKeepsTheOldOrder() {
+        insert(habit("Alpha", position = 0), habit("Bravo", position = 1))
+        openFromMenu("HABIT ORDER")
+        waitForText("Alpha")
+        orderCard("Alpha").performCustomAccessibilityActionWithLabel(MOVE_DOWN)
+
+        Espresso.pressBack()
+        waitForText("Discard changes?")
+        rule.onNodeWithText("Keep editing").performClick()
+        waitForCrumbs("Home", "Menu", "Habit Order")
+        assertEquals(listOf("Bravo", "Alpha"), shownTopToBottom("Alpha", "Bravo"))
+
+        crumb("Home").performClick()
+        waitForText("Discard changes?")
+        rule.onNodeWithText("Discard").performClick()
+        // Straight to Home: no breadcrumb header any more.
+        waitFor { rule.onAllNodesWithTag(BREADCRUMBS_TAG).fetchSemanticsNodes().isEmpty() }
+        waitForText("Alpha")
+        assertEquals(listOf("Alpha", "Bravo"), shownTopToBottom("Alpha", "Bravo"))
+        assertEquals(listOf(0, 1), listOf("Alpha", "Bravo").map(::place))
+    }
+
+    @Test
+    fun habitOrder_aNewHabitGoesOnTop() {
+        insert(habit("Existing", position = 0))
+        openFromMenu("ADD HABIT")
+        waitForText("Create")
+        rule.onNodeWithText("Habit name").performTextInput("newcomer")
+        rule.onNodeWithText("Description").performTextInput("Fresh.")
+        rule.onNodeWithContentDescription("Sky").performScrollTo().performClick()
+        rule.onNodeWithContentDescription("Water").performScrollTo().performClick()
+        rule.onNodeWithText("Create").performClick()
+        waitForText("HABIT ORDER")
+        assertTrue(place("Newcomer") < place("Existing"))
+
+        rule.onNodeWithText("HABIT ORDER").performClick()
+        waitForText("Newcomer")
+        rule.onNode(hasText("Newcomer") and hasText("1")).assertIsDisplayed()
+    }
+
+    @Test
+    fun habitOrder_noHabits_saysSo() {
+        openFromMenu("HABIT ORDER")
+        waitForText("No habits to order.")
     }
 
     // ---- Timer -----------------------------------------------------------------------------

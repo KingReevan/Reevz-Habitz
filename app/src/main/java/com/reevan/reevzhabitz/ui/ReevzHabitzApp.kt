@@ -29,9 +29,9 @@ import com.reevan.reevzhabitz.ui.common.BreadcrumbHeader
 import com.reevan.reevzhabitz.ui.common.DateHeader
 import com.reevan.reevzhabitz.ui.edithabit.EditHabitListScreen
 import com.reevan.reevzhabitz.ui.edithabit.EditHabitScreen
+import com.reevan.reevzhabitz.ui.habitorder.HabitOrderScreen
 import com.reevan.reevzhabitz.ui.home.HomeScreen
 import com.reevan.reevzhabitz.ui.home.HomeViewModel
-import com.reevan.reevzhabitz.ui.home.SortButton
 import com.reevan.reevzhabitz.ui.menu.MenuScreen
 import com.reevan.reevzhabitz.ui.navigation.BackStackSaver
 import com.reevan.reevzhabitz.ui.navigation.Destination
@@ -71,7 +71,6 @@ fun ReevzHabitzApp(openTimerRequests: Int = 0) {
     }
     val current = backStack.last()
     val today by TodayClock.instance.today.collectAsStateWithLifecycle()
-    // Held here rather than inside HomeScreen because Home's header (sort button) needs it too.
     val home: HomeViewModel = viewModel(factory = HomeViewModel.Factory)
     val homeState by home.state.collectAsStateWithLifecycle()
 
@@ -109,7 +108,6 @@ fun ReevzHabitzApp(openTimerRequests: Int = 0) {
         topBar = {
             if (current == Destination.Home) {
                 DateHeader(date = formatHeaderDate(today)) {
-                    homeState?.let { SortButton(sort = it.sort, onClick = home::cycleSort) }
                     IconButton(onClick = { navigate(Destination.Menu) }) {
                         Icon(
                             painter = painterResource(R.drawable.ic_menu),
@@ -172,6 +170,11 @@ fun ReevzHabitzApp(openTimerRequests: Int = 0) {
                     HabitStatisticsScreen(habitId = current.habitId, onGone = finish(current))
                 }
                 Destination.Settings -> SettingsScreen()
+                Destination.HabitOrder -> HabitOrderScreen(
+                    leaveGuard = leaveGuard,
+                    onLeave = commitLeave,
+                    onDone = finish(Destination.HabitOrder),
+                )
                 Destination.Timer -> TimerListScreen(
                     onOpen = { navigate(Destination.SavedTimer(it)) },
                     onNew = { navigate(Destination.NewTimer) },

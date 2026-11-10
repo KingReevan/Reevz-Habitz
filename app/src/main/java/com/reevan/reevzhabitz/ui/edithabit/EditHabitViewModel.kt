@@ -11,7 +11,7 @@ import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDao
 import com.reevan.reevzhabitz.data.HabitDatabase
 import com.reevan.reevzhabitz.ui.common.SubmissionTracker
-import com.reevan.reevzhabitz.ui.common.activeHabitsInHomeOrder
+import com.reevan.reevzhabitz.ui.common.activeHabitsInListOrder
 import com.reevan.reevzhabitz.ui.habitform.HabitEdits
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -28,9 +28,9 @@ class EditHabitViewModel(
     settingsDao: AppSettingsDao,
 ) : ViewModel() {
 
-    /** Every active habit, including ones not yet started, in Home's sort. Null until loaded. */
+    /** Every active habit, including ones not yet started, in the lists' sort. Null until loaded. */
     val habits: StateFlow<List<Habit>?> =
-        activeHabitsInHomeOrder(habitDao, settingsDao)
+        activeHabitsInListOrder(habitDao, settingsDao)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
     /** The habit as stored now, or null if it has gone (removed meanwhile). */

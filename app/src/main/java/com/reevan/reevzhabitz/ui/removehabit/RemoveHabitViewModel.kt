@@ -11,7 +11,7 @@ import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDao
 import com.reevan.reevzhabitz.data.HabitDatabase
 import com.reevan.reevzhabitz.ui.common.SubmissionTracker
-import com.reevan.reevzhabitz.ui.common.activeHabitsInHomeOrder
+import com.reevan.reevzhabitz.ui.common.activeHabitsInListOrder
 import com.reevan.reevzhabitz.util.TodayClock
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +20,7 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 /**
- * Every active habit — including ones that haven't started yet — in Home's current sort, and the
+ * Every active habit — including ones that haven't started yet — in the lists' sort, and the
  * removal itself. Holds no selection: that is per-visit state, kept in the screen (see
  * AddHabitViewModel for why).
  */
@@ -32,7 +32,7 @@ class RemoveHabitViewModel(
 
     /** Null until the first read completes. */
     val habits: StateFlow<List<Habit>?> =
-        activeHabitsInHomeOrder(habitDao, settingsDao)
+        activeHabitsInListOrder(habitDao, settingsDao)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), null)
 
     /** Remove's submissions; the screen watches it to leave once the habits are gone. */

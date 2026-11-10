@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 /**
- * Every active habit — including ones that haven't started yet — in Home's current sort. The list
- * behind Remove Habit and Edit Habit, so both show habits in the same places Home does.
+ * Every active habit — including ones that haven't started yet — in the lists' [HomeSort]. The
+ * list behind Remove Habit and Edit Habit, so both show habits in the same places.
  */
-fun activeHabitsInHomeOrder(habitDao: HabitDao, settingsDao: AppSettingsDao): Flow<List<Habit>> =
+fun activeHabitsInListOrder(habitDao: HabitDao, settingsDao: AppSettingsDao): Flow<List<Habit>> =
     combine(
         habitDao.observeActive(),
         settingsDao.observe().map { it?.homeSort ?: HomeSort.ALPHABETICAL },

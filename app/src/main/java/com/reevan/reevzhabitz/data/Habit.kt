@@ -36,4 +36,11 @@ data class Habit(
      */
     @ColumnInfo(defaultValue = "127")
     val days: Set<DayOfWeek> = Weekdays.EveryDay,
+    /**
+     * Its place on Home, set in Habit Order: lower comes first. A new habit goes above every other
+     * ([HabitDao.insertOnTop]); Habit Order's Save renumbers them 0, 1, 2… Only Home's order reads
+     * it. Habits from before v3 were numbered in the order Home showed them then.
+     */
+    @ColumnInfo(defaultValue = "0")
+    val homePosition: Int = 0,
 )

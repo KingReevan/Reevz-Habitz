@@ -6,18 +6,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import com.reevan.reevzhabitz.data.AppSettingsDao
 import com.reevan.reevzhabitz.data.Completion
 import com.reevan.reevzhabitz.data.CompletionDao
 import com.reevan.reevzhabitz.data.HabitDao
 import com.reevan.reevzhabitz.data.HabitDatabase
 import com.reevan.reevzhabitz.data.HabitOnDay
-import com.reevan.reevzhabitz.data.HomeSort
 import com.reevan.reevzhabitz.util.TodayClock
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -27,7 +24,6 @@ import java.time.LocalDate
 data class HomeUiState(
     /** Today's habits in display order: to do first, done last. */
     val habits: List<HabitOnDay>,
-    val sort: HomeSort,
 )
 
 /**
@@ -38,18 +34,14 @@ data class HomeUiState(
 class HomeViewModel(
     private val habitDao: HabitDao,
     private val completionDao: CompletionDao,
-    private val settingsDao: AppSettingsDao,
     private val today: StateFlow<LocalDate>,
 ) : ViewModel() {
 
     /** Null until the first read completes, so Home doesn't flash its empty message. */
     val state: StateFlow<HomeUiState?> =
-        combine(
-            today.flatMapLatest { habitDao.observeDueOn(it) },
-            settingsDao.observe().map { it?.homeSort ?: HomeSort.ALPHABETICAL },
-        ) { habits, sort ->
-            HomeUiState(habits = orderForHome(habits, sort), sort = sort)
-        }.stateIn(
+        today.flatMapLatest { habitDao.observeDueOn(it) }
+            .map { habits -> HomeUiState(habits = orderForHome(habits)) }
+            .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS),
             initialValue = null,
@@ -65,10 +57,6 @@ class HomeViewModel(
         viewModelScope.launch { completionDao.markNotDone(habitId, day) }
     }
 
-    fun cycleSort() {
-        viewModelScope.launch { settingsDao.cycleHomeSort() }
-    }
-
     companion object {
         private const val STOP_TIMEOUT_MILLIS = 5_000L
 
@@ -80,7 +68,6 @@ class HomeViewModel(
                 HomeViewModel(
                     habitDao = db.habitDao(),
                     completionDao = db.completionDao(),
-                    settingsDao = db.appSettingsDao(),
                     today = TodayClock.instance.today,
                 )
             }

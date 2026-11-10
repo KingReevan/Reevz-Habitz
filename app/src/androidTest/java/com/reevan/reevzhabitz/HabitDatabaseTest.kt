@@ -3,6 +3,7 @@ package com.reevan.reevzhabitz
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.reevan.reevzhabitz.data.AppSettings
 import com.reevan.reevzhabitz.data.Completion
 import com.reevan.reevzhabitz.data.Habit
 import com.reevan.reevzhabitz.data.HabitDatabase
@@ -153,19 +154,45 @@ class HabitDatabaseTest {
     }
 
     @Test
-    fun settings_sortCyclesAndThemeChangesDontOverwriteEachOther() = runBlocking {
+    fun settings_themeChangeKeepsTheListsSort() = runBlocking {
         val dao = db.appSettingsDao()
         assertNull(dao.get())
-
-        dao.cycleHomeSort()
-        assertEquals(HomeSort.NEWEST_FIRST, dao.get()!!.homeSort)
+        dao.insertIfMissing(AppSettings(homeSort = HomeSort.NEWEST_FIRST))
         dao.setThemeMode(ThemeMode.TOKYO_NIGHT)
-        dao.cycleHomeSort()
-        dao.cycleHomeSort()
 
         val settings = dao.get()!!
-        assertEquals(HomeSort.ALPHABETICAL, settings.homeSort)
+        assertEquals(HomeSort.NEWEST_FIRST, settings.homeSort)
         assertEquals(ThemeMode.TOKYO_NIGHT, settings.themeMode)
+    }
+
+    @Test
+    fun insertOnTop_goesAboveEveryActiveHabit() = runBlocking {
+        val dao = db.habitDao()
+        val first = dao.insertOnTop(habit("First"))
+        assertEquals(0, dao.getById(first)!!.homePosition)
+        dao.setHomeOrder(listOf(first))
+        dao.insert(habit("Low").copy(homePosition = 5))
+        val gone = dao.insert(habit("Gone").copy(homePosition = -9))
+        dao.remove(listOf(gone), keepStats = true, today = day)        // removed: doesn't count
+        val newest = dao.insertOnTop(habit("Newest"))
+        assertEquals(-1, dao.getById(newest)!!.homePosition)
+    }
+
+    @Test
+    fun setHomeOrder_changesOnlyThePlaces() = runBlocking {
+        val dao = db.habitDao()
+        val a = dao.insert(habit("A"))
+        val b = dao.insert(habit("B").copy(days = setOf(MONDAY)))
+        val c = dao.insert(habit("C"))
+        db.completionDao().markDone(Completion(b, day))
+        val before = listOf(a, b, c).map { dao.getById(it)!! }
+
+        dao.setHomeOrder(listOf(c, a, b))
+
+        val after = listOf(a, b, c).map { dao.getById(it)!! }
+        assertEquals(listOf(1, 2, 0), after.map { it.homePosition })
+        assertEquals(before.map { it.copy(homePosition = 0) }, after.map { it.copy(homePosition = 0) })
+        assertEquals(listOf(day), db.completionDao().observeDatesFor(b).first())
     }
 
     @Test
